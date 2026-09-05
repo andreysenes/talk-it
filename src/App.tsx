@@ -172,23 +172,6 @@ export default function App() {
             }
           />
         </main>
-
-        <footer className="pb-4 text-xs leading-relaxed text-neutral-600">
-          SoftVoice / <code className="text-neutral-400">TIBASE32.DLL</code> is a 32-bit Windows binary, so the original
-          engine cannot run on modern macOS. This app synthesizes the same class of speech
-          (parallel formant, Rosenberg glottal pulse) with Talk It! presets reverse-engineered
-          by OpenTalkIt. It is not a bit-exact dump of the proprietary DLL. Engine:{' '}
-          <a
-            className="text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:text-white"
-            href="https://klatts.ch/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            klattsch
-          </a>
-          . MIDI in/out is Web MIDI; audio returns to the DAW through the selected output
-          (BlackHole / Loopback on Mac).
-        </footer>
       </div>
     </div>
   )
