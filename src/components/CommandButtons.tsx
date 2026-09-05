@@ -64,19 +64,17 @@ export function CommandButtons({
   language: Language
   pitch: number
   rate: number
-  selectedLabel: string | null
+  selectedLabel: string
   onLanguage: (l: Language) => void
   onPitch: (n: number) => void
   onRate: (n: number) => void
 }) {
-  const [open, setOpen] = useState<CommandKind | null>(null)
+  const [open, setOpen] = useState<CommandKind | null>('pitch')
   const rootRef = useRef<HTMLDivElement>(null)
-  const armed = selectedLabel != null
 
   useEffect(() => {
-    if (armed) setOpen('pitch')
-    else setOpen(null)
-  }, [armed, selectedLabel])
+    setOpen('pitch')
+  }, [selectedLabel])
 
   useEffect(() => {
     if (open == null) return
@@ -105,7 +103,6 @@ export function CommandButtons({
   const rateToken = `{{rate ${rate}}}`
 
   function toggle(kind: CommandKind) {
-    if (!armed) return
     setOpen((current) => (current === kind ? null : kind))
   }
 
@@ -119,10 +116,9 @@ export function CommandButtons({
           label="Language"
           token={langToken}
           open={open === 'language'}
-          disabled={!armed}
           onToggle={() => toggle('language')}
         />
-        {armed && open === 'language' ? (
+        {open === 'language' ? (
           <div className={popoverClass} role="dialog">
             <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
               Language
@@ -162,10 +158,9 @@ export function CommandButtons({
           label="Pitch"
           token={pitchToken}
           open={open === 'pitch'}
-          disabled={!armed}
           onToggle={() => toggle('pitch')}
         />
-        {armed && open === 'pitch' ? (
+        {open === 'pitch' ? (
           <div className={popoverClass} role="dialog">
             <ValuePanel label="Pitch" id="command-pitch" value={pitch} onChange={onPitch} />
           </div>
@@ -177,10 +172,9 @@ export function CommandButtons({
           label="Rate"
           token={rateToken}
           open={open === 'rate'}
-          disabled={!armed}
           onToggle={() => toggle('rate')}
         />
-        {armed && open === 'rate' ? (
+        {open === 'rate' ? (
           <div className={popoverClass} role="dialog">
             <ValuePanel label="Rate" id="command-rate" value={rate} onChange={onRate} />
           </div>
@@ -188,7 +182,7 @@ export function CommandButtons({
       </div>
 
       <span className="text-[11px] text-neutral-600">
-        {armed ? selectedLabel : 'Tap a word · double-click to type'}
+        {selectedLabel}
         {' · '}⌘/Ctrl+Enter talks
       </span>
     </div>

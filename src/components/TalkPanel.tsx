@@ -1,5 +1,5 @@
 import { Download, Square, Volume2 } from 'lucide-react'
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
 import { VolumeControl } from './VolumeControl'
 import { Button } from './ui/button'
@@ -109,6 +109,7 @@ export function TalkPanel({
   const [editing, setEditing] = useState(false)
   const [selectedStart, setSelectedStart] = useState<number | null>(null)
   const editorRef = useRef<HTMLDivElement>(null)
+  const textBlockRef = useRef<HTMLDivElement>(null)
   const defaults = useMemo(
     () => ({ language, pitch, rate: speed }),
     [language, pitch, speed],
@@ -131,6 +132,20 @@ export function TalkPanel({
     if (speaking) setEditing(false)
   }, [speaking])
 
+  useEffect(() => {
+    if (selectedStart == null) return
+
+    function onPointerDown(event: PointerEvent) {
+      const root = textBlockRef.current
+      if (!root) return
+      if (event.target instanceof Node && root.contains(event.target)) return
+      setSelectedStart(null)
+    }
+
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [selectedStart])
+
   function applyToSelected(patch: Partial<{ language: Language; pitch: number; rate: number }>) {
     if (selectedStart == null) return
     const inherited = inheritedBeforeWord(text, selectedStart, defaults)
@@ -150,6 +165,7 @@ export function TalkPanel({
         What to say
       </p>
       <div
+        ref={textBlockRef}
         className="relative"
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
