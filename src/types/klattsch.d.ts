@@ -11,7 +11,12 @@ declare module 'klattsch' {
   ): {
     schedule: ScheduleEvent[]
     totalMs: number
-    phrases?: unknown[]
+    phrases?: Array<{
+      phoneme?: string | null
+      tStartMs?: number
+      tEndMs?: number
+      kind?: string
+    }>
     voices?: Array<{ schedule: ScheduleEvent[]; totalMs: number }>
   }
 

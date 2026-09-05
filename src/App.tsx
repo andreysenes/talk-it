@@ -62,7 +62,7 @@ export default function App() {
   })
 
   const audio = useAudioOutputs()
-  const { state, error, speak, stop, exportWav, unlock } = useTalkEngine(
+  const { state, error, speak, stop, exportWav, unlock, highlight } = useTalkEngine(
     audio.sinkId,
     volume / 100,
   )
@@ -140,6 +140,7 @@ export default function App() {
             rendering={state === 'rendering'}
             exporting={state === 'exporting'}
             error={error}
+            highlight={highlight}
             onTalk={() => void speak(text, settings)}
             onStop={stop}
             onExport={() => void exportWav(text, settings)}

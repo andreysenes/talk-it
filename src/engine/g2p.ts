@@ -481,23 +481,33 @@ function expandToken(raw: string, language: Language): string[] {
   return [trimmed]
 }
 
-function tokenizeText(text: string): Array<{ word: string; pause?: string }> {
-  const tokens: Array<{ word: string; pause?: string }> = []
+function tokenizeText(text: string, base = 0): Array<{
+  word: string
+  start: number
+  end: number
+  pause?: string
+}> {
+  const tokens: Array<{ word: string; start: number; end: number; pause?: string }> = []
   const parts = text.split(/(\s+|[,.;:!?…]+)/)
+  let offset = 0
   for (const part of parts) {
+    const start = base + offset
+    const end = start + part.length
+    offset += part.length
     if (!part || /^\s+$/.test(part)) continue
     if (/^[,.;:!?…]+$/.test(part)) {
       const last = tokens[tokens.length - 1]
-      const pause = part.includes('?') || part.includes('!') || part.includes('.')
-        ? '.'
-        : part.includes(';')
-          ? ';'
-          : ','
+      const pause =
+        part.includes('?') || part.includes('!') || part.includes('.')
+          ? '.'
+          : part.includes(';')
+            ? ';'
+            : ','
       if (last) last.pause = pause
-      else tokens.push({ word: '', pause })
+      else tokens.push({ word: '', start, end, pause })
       continue
     }
-    tokens.push({ word: part })
+    tokens.push({ word: part, start, end })
   }
   return tokens
 }
@@ -566,23 +576,34 @@ function phonesForWord(word: string, language: Language): Phone[] {
 export function textToPhones(
   text: string,
   language: Language,
-): Array<{ phones: Phone[]; pause?: string }> {
-  const chunks: Array<{ phones: Phone[]; pause?: string }> = []
-  for (const token of tokenizeText(text)) {
+  base = 0,
+): Array<{ phones: Phone[]; pause?: string; start: number; end: number }> {
+  const chunks: Array<{ phones: Phone[]; pause?: string; start: number; end: number }> = []
+  for (const token of tokenizeText(text, base)) {
     if (!token.word && token.pause) {
-      chunks.push({ phones: [], pause: token.pause })
+      chunks.push({ phones: [], pause: token.pause, start: token.start, end: token.end })
       continue
     }
-    for (const piece of token.word.split(/[-/]/)) {
+    let local = token.start
+    const pieces = token.word.split(/([-/])/)
+    for (const piece of pieces) {
+      if (!piece) continue
+      if (piece === '-' || piece === '/') {
+        local += piece.length
+        continue
+      }
+      const pieceStart = local
+      const pieceEnd = local + piece.length
+      local = pieceEnd
       for (const expanded of expandToken(piece, language)) {
         const phones = phonesForWord(expanded, language)
-        if (phones.length) chunks.push({ phones })
+        if (phones.length) chunks.push({ phones, start: pieceStart, end: pieceEnd })
       }
     }
     if (token.pause) {
       const last = chunks[chunks.length - 1]
       if (last) last.pause = token.pause
-      else chunks.push({ phones: [], pause: token.pause })
+      else chunks.push({ phones: [], pause: token.pause, start: token.start, end: token.end })
     }
   }
   return chunks

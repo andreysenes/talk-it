@@ -29,6 +29,27 @@ const EXAMPLES = [
   },
 ]
 
+function WordHighlight({
+  text,
+  start,
+  end,
+}: {
+  text: string
+  start: number | null
+  end: number | null
+}) {
+  if (start == null || end == null || end <= start) return text
+  return (
+    <>
+      {text.slice(0, start)}
+      <mark className="box-decoration-clone rounded-[2px] bg-neutral-600 px-0.5 text-white">
+        {text.slice(start, end)}
+      </mark>
+      {text.slice(end)}
+    </>
+  )
+}
+
 function insertToken(text: string, token: string, start: number, end: number) {
   const before = text.slice(0, start)
   const after = text.slice(end)
@@ -48,6 +69,7 @@ export function TalkPanel({
   rendering,
   exporting,
   error,
+  highlight,
   onTalk,
   onStop,
   onExport,
@@ -64,6 +86,7 @@ export function TalkPanel({
   rendering: boolean
   exporting: boolean
   error: string | null
+  highlight: { start: number; end: number } | null
   onTalk: () => void
   onStop: () => void
   onExport: () => void
@@ -73,6 +96,7 @@ export function TalkPanel({
 }) {
   const busy = speaking || rendering || exporting
   const empty = !text.trim()
+  const overlayRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   function insertCommand(token: string) {
@@ -94,25 +118,42 @@ export function TalkPanel({
       <label className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase" htmlFor="talk-text">
         What to say
       </label>
-      <textarea
-        id="talk-text"
-        name="talk-text"
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => onText(e.target.value)}
-        placeholder="Type anything. Talk It! will speak it in the selected voice."
-        rows={5}
-        className={cn(
-          'w-full resize-y rounded-sm border border-neutral-800 bg-black p-3 font-sans text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-white',
-          error && 'border-white',
-        )}
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-            e.preventDefault()
-            onTalk()
-          }
-        }}
-      />
+      <div className="relative">
+        {speaking ? (
+          <div
+            ref={overlayRef}
+            className="pointer-events-none absolute inset-0 overflow-auto bg-black p-3 font-sans text-base leading-normal text-neutral-100 whitespace-pre-wrap"
+            aria-hidden
+          >
+            <WordHighlight text={text} start={highlight?.start ?? null} end={highlight?.end ?? null} />
+          </div>
+        ) : null}
+        <textarea
+          id="talk-text"
+          name="talk-text"
+          ref={textareaRef}
+          value={text}
+          readOnly={speaking}
+          onChange={(e) => onText(e.target.value)}
+          onScroll={(e) => {
+            const overlay = overlayRef.current
+            if (overlay) overlay.scrollTop = e.currentTarget.scrollTop
+          }}
+          placeholder="Type anything. Talk It! will speak it in the selected voice."
+          rows={5}
+          className={cn(
+            'w-full resize-y rounded-sm border border-neutral-800 bg-black p-3 font-sans text-base leading-normal text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-white',
+            speaking && 'text-transparent caret-transparent',
+            error && 'border-white',
+          )}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              e.preventDefault()
+              onTalk()
+            }
+          }}
+        />
+      </div>
       {error ? (
         <p className="text-sm font-medium text-white" role="alert">
           {error}

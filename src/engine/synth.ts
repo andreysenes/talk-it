@@ -19,6 +19,14 @@ export type RenderedUtterance = {
   sampleRate: number
   durationMs: number
   phonemes: string
+  words: SpokenWord[]
+}
+
+export type SpokenWord = {
+  start: number
+  end: number
+  startMs: number
+  endMs: number
 }
 
 const BASE_F0 = 110
@@ -90,11 +98,11 @@ const COMMAND_RE =
   /\{\{\s*(spanish|english|pitch\s+-?\d+|rate\s+-?\d+|speed\s+-?\d+)\s*\}\}/gi
 
 type Embedded =
-  | { kind: 'text'; text: string }
-  | { kind: 'spanish' }
-  | { kind: 'english' }
-  | { kind: 'pitch'; value: number }
-  | { kind: 'rate'; value: number }
+  | { kind: 'text'; text: string; start: number; end: number }
+  | { kind: 'spanish'; start: number; end: number }
+  | { kind: 'english'; start: number; end: number }
+  | { kind: 'pitch'; value: number; start: number; end: number }
+  | { kind: 'rate'; value: number; start: number; end: number }
 
 export function parseEmbedded(text: string): Embedded[] {
   const out: Embedded[] = []
@@ -103,21 +111,25 @@ export function parseEmbedded(text: string): Embedded[] {
   let match: RegExpExecArray | null
   while ((match = re.exec(text))) {
     if (match.index > last) {
-      out.push({ kind: 'text', text: text.slice(last, match.index) })
+      out.push({ kind: 'text', text: text.slice(last, match.index), start: last, end: match.index })
     }
     const body = (match[1] ?? '').trim().toLowerCase()
+    const start = match.index
+    const end = match.index + match[0].length
     if (body === 'spanish' || body === 'english') {
-      out.push({ kind: body })
+      out.push({ kind: body, start, end })
     } else {
       const [name, raw] = body.split(/\s+/)
       const value = Number(raw)
       if (Number.isFinite(value) && value !== 0) {
-        out.push({ kind: name === 'pitch' ? 'pitch' : 'rate', value })
+        out.push({ kind: name === 'pitch' ? 'pitch' : 'rate', value, start, end })
       }
     }
     last = match.index + match[0].length
   }
-  if (last < text.length) out.push({ kind: 'text', text: text.slice(last) })
+  if (last < text.length) {
+    out.push({ kind: 'text', text: text.slice(last), start: last, end: text.length })
+  }
   return out
 }
 
@@ -125,8 +137,18 @@ export function textToPhonemeString(
   text: string,
   settings: TalkSettings,
 ): string {
+  return planUtterance(text, settings).phonemes
+}
+
+type PlannedWord = { start: number; end: number; phoneCount: number }
+
+function planUtterance(
+  text: string,
+  settings: TalkSettings,
+): { phonemes: string; words: PlannedWord[] } {
   const parts = parseEmbedded(text)
   const tokens: string[] = [voicePrefix(settings)]
+  const words: PlannedWord[] = []
   let language = settings.language
   const question = /\?\s*$/.test(text.replace(COMMAND_RE, ' '))
   const lastTextIndex = parts.reduce(
@@ -153,7 +175,16 @@ export function textToPhonemeString(
       tokens.push(`r${speedToRateMs(part.value, settings.pitchQuality).toFixed(0)}`)
       continue
     }
-    const chunks = textToPhones(part.text, language)
+    const chunks = textToPhones(part.text, language, part.start)
+    for (const chunk of chunks) {
+      if (chunk.phones.length) {
+        words.push({
+          start: chunk.start,
+          end: chunk.end,
+          phoneCount: chunk.phones.length,
+        })
+      }
+    }
     const arpabet = phonesToArpabet(
       chunks,
       settings.pitchQuality,
@@ -163,7 +194,7 @@ export function textToPhonemeString(
     if (arpabet) tokens.push(arpabet)
   }
 
-  return tokens.join(' ').trim()
+  return { phonemes: tokens.join(' ').trim(), words }
 }
 
 function crush8bit(samples: Float32Array, fromRate: number): {
@@ -193,12 +224,45 @@ function applyWhisper(schedule: ScheduleEvent[]): ScheduleEvent[] {
   }))
 }
 
+function timedWords(
+  planned: PlannedWord[],
+  phrases: Array<{ phoneme?: string | null; tStartMs?: number; tEndMs?: number }> | undefined,
+  compiledMs: number,
+  audioMs: number,
+): SpokenWord[] {
+  const phones = (phrases ?? []).filter((p) => p.phoneme)
+  const scale = compiledMs > 0 ? audioMs / compiledMs : 1
+  let i = 0
+  const usedPhones = phones.length > 0 && phones.length >= planned.reduce((n, w) => n + w.phoneCount, 0)
+
+  if (usedPhones) {
+    return planned.map((word) => {
+      const n = Math.max(1, word.phoneCount)
+      const slice = phones.slice(i, i + n)
+      i += n
+      const startMs = (slice[0]?.tStartMs ?? 0) * scale
+      const endMs = (slice[slice.length - 1]?.tEndMs ?? startMs) * scale
+      return { start: word.start, end: word.end, startMs, endMs }
+    })
+  }
+
+  const totalPhones = planned.reduce((n, w) => n + Math.max(1, w.phoneCount), 0) || 1
+  let t = 0
+  return planned.map((word) => {
+    const share = Math.max(1, word.phoneCount) / totalPhones
+    const startMs = t
+    const endMs = t + audioMs * share
+    t = endMs
+    return { start: word.start, end: word.end, startMs, endMs }
+  })
+}
+
 export function renderUtterance(
   text: string,
   settings: TalkSettings,
 ): RenderedUtterance {
-  const phonemes = textToPhonemeString(text, settings)
-  const compiled = compileString(phonemes)
+  const planned = planUtterance(text, settings)
+  const compiled = compileString(planned.phonemes)
   let schedule = compiled.schedule
   if (settings.vocalEffort === 'whispered') schedule = applyWhisper(schedule)
 
@@ -211,19 +275,24 @@ export function renderUtterance(
 
   if (settings.vintage) {
     const crushed = crush8bit(samples, sampleRate)
+    samples = crushed.samples
+    const audioMs = (samples.length / crushed.sampleRate) * 1000
     return {
-      samples: crushed.samples,
+      samples,
       sampleRate: crushed.sampleRate,
       durationMs: compiled.totalMs,
-      phonemes,
+      phonemes: planned.phonemes,
+      words: timedWords(planned.words, compiled.phrases, compiled.totalMs, audioMs),
     }
   }
 
+  const audioMs = (samples.length / sampleRate) * 1000
   return {
     samples,
     sampleRate,
     durationMs: compiled.totalMs,
-    phonemes,
+    phonemes: planned.phonemes,
+    words: timedWords(planned.words, compiled.phrases, compiled.totalMs, audioMs),
   }
 }
 

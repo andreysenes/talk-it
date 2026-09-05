@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TalkSettings } from '../engine/personalities'
+import type { SpokenWord } from '../engine/synth'
 
 type PlayState = 'idle' | 'rendering' | 'speaking' | 'exporting' | 'error'
 
@@ -11,18 +12,26 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   const ctxRef = useRef<AudioContext | null>(null)
   const gainRef = useRef<GainNode | null>(null)
   const sourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const rafRef = useRef<number>(0)
+  const startedAtRef = useRef(0)
+  const wordsRef = useRef<SpokenWord[]>([])
   const volumeRef = useRef(volume)
   volumeRef.current = volume
   const [state, setState] = useState<PlayState>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [highlight, setHighlight] = useState<{ start: number; end: number } | null>(null)
 
   const stop = useCallback(() => {
+    cancelAnimationFrame(rafRef.current)
+    rafRef.current = 0
     try {
       sourceRef.current?.stop()
     } catch {
       /* already stopped */
     }
     sourceRef.current = null
+    wordsRef.current = []
+    setHighlight(null)
     setState('idle')
   }, [])
 
@@ -64,7 +73,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       setState('rendering')
       try {
         const { renderUtterance } = await loadSynth()
-        const utterance = renderUtterance(trimmed, settings)
+        const utterance = renderUtterance(text, settings)
         if (!utterance.samples.length) {
           setError('Nothing to say — try different words.')
           setState('error')
@@ -81,12 +90,35 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         source.onended = () => {
           if (sourceRef.current === source) {
             sourceRef.current = null
+            cancelAnimationFrame(rafRef.current)
+            rafRef.current = 0
+            wordsRef.current = []
+            setHighlight(null)
             setState('idle')
           }
         }
         sourceRef.current = source
+        wordsRef.current = utterance.words
         setState('speaking')
         source.start()
+        startedAtRef.current = ctx.currentTime
+        let lastKey = ''
+        const tick = () => {
+          if (sourceRef.current !== source) return
+          const elapsed = (ctx.currentTime - startedAtRef.current) * 1000
+          let word: SpokenWord | null = null
+          for (const next of wordsRef.current) {
+            if (elapsed >= next.startMs) word = next
+            else break
+          }
+          const key = word ? `${word.start}:${word.end}` : ''
+          if (key !== lastKey) {
+            lastKey = key
+            setHighlight(word ? { start: word.start, end: word.end } : null)
+          }
+          rafRef.current = requestAnimationFrame(tick)
+        }
+        rafRef.current = requestAnimationFrame(tick)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not speak.')
         setState('error')
@@ -143,5 +175,5 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     await ensureContext()
   }, [ensureContext])
 
-  return { state, error, speak, stop, exportWav, unlock, setError }
+  return { state, error, speak, stop, exportWav, unlock, highlight, setError }
 }
