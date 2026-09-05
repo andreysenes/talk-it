@@ -1,5 +1,5 @@
 import { Download, Square, Volume2 } from 'lucide-react'
-import { useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
 import { VolumeControl } from './VolumeControl'
 import { Button } from './ui/button'
@@ -29,6 +29,9 @@ const EXAMPLES = [
   },
 ]
 
+const editorClass =
+  'min-h-[10rem] w-full rounded-sm border border-neutral-800 bg-black px-1 py-2 font-sans text-2xl leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:min-h-[12rem] sm:text-3xl sm:leading-snug'
+
 function WordHighlight({
   text,
   start,
@@ -57,6 +60,45 @@ function insertToken(text: string, token: string, start: number, end: number) {
   const trail = after.length > 0 && !/^\s/.test(after) ? ' ' : ''
   const inserted = `${lead}${token}${trail}`
   return { next: before + inserted + after, caret: before.length + inserted.length }
+}
+
+function caretOffsets(el: HTMLElement, fallback: number) {
+  const sel = window.getSelection()
+  if (!sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) {
+    return { start: fallback, end: fallback }
+  }
+  const range = sel.getRangeAt(0)
+  const pre = range.cloneRange()
+  pre.selectNodeContents(el)
+  pre.setEnd(range.startContainer, range.startOffset)
+  const start = pre.toString().length
+  return { start, end: start + range.toString().length }
+}
+
+function placeCaret(el: HTMLElement, offset: number) {
+  const sel = window.getSelection()
+  if (!sel) return
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+  let pos = 0
+  let node = walker.nextNode()
+  while (node) {
+    const len = node.textContent?.length ?? 0
+    if (pos + len >= offset) {
+      const range = document.createRange()
+      range.setStart(node, Math.max(0, offset - pos))
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
+      return
+    }
+    pos += len
+    node = walker.nextNode()
+  }
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  range.collapse(false)
+  sel.removeAllRanges()
+  sel.addRange(range)
 }
 
 export function TalkPanel({
@@ -96,63 +138,73 @@ export function TalkPanel({
 }) {
   const busy = speaking || rendering || exporting
   const empty = !text.trim()
-  const overlayRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<HTMLDivElement>(null)
+  const caretRef = useRef<number | null>(null)
+
+  useLayoutEffect(() => {
+    if (speaking) return
+    const el = editorRef.current
+    if (!el) return
+    if (el.innerText === text) return
+    el.innerText = text
+    if (caretRef.current != null) {
+      placeCaret(el, caretRef.current)
+      caretRef.current = null
+    }
+  }, [text, speaking])
 
   function insertCommand(token: string) {
-    const el = textareaRef.current
-    const start = el?.selectionStart ?? text.length
-    const end = el?.selectionEnd ?? text.length
+    const el = editorRef.current
+    const { start, end } = el ? caretOffsets(el, text.length) : { start: text.length, end: text.length }
     const { next, caret } = insertToken(text, token, start, end)
+    caretRef.current = caret
     onText(next)
-    requestAnimationFrame(() => {
-      const box = textareaRef.current
-      if (!box) return
-      box.focus()
-      box.setSelectionRange(caret, caret)
-    })
+    requestAnimationFrame(() => editorRef.current?.focus())
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase" htmlFor="talk-text">
+      <p
+        id="talk-text-label"
+        className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"
+      >
         What to say
-      </label>
+      </p>
       <div className="relative">
         {speaking ? (
-          <div
-            ref={overlayRef}
-            className="pointer-events-none absolute inset-0 overflow-auto bg-black p-3 font-sans text-base leading-normal text-neutral-100 whitespace-pre-wrap"
-            aria-hidden
-          >
+          <div className={cn(editorClass, error && 'border-white')}>
             <WordHighlight text={text} start={highlight?.start ?? null} end={highlight?.end ?? null} />
           </div>
-        ) : null}
-        <textarea
-          id="talk-text"
-          name="talk-text"
-          ref={textareaRef}
-          value={text}
-          readOnly={speaking}
-          onChange={(e) => onText(e.target.value)}
-          onScroll={(e) => {
-            const overlay = overlayRef.current
-            if (overlay) overlay.scrollTop = e.currentTarget.scrollTop
-          }}
-          placeholder="Type anything. Talk It! will speak it in the selected voice."
-          rows={5}
-          className={cn(
-            'w-full resize-y rounded-sm border border-neutral-800 bg-black p-3 font-sans text-base leading-normal text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-white',
-            speaking && 'text-transparent caret-transparent',
-            error && 'border-white',
-          )}
-          onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        ) : (
+          <div
+            id="talk-text"
+            ref={editorRef}
+            role="textbox"
+            aria-multiline="true"
+            aria-labelledby="talk-text-label"
+            contentEditable
+            suppressContentEditableWarning
+            tabIndex={0}
+            className={cn(editorClass, 'cursor-text caret-white focus:border-white', error && 'border-white')}
+            onInput={(e) => onText(e.currentTarget.innerText)}
+            onPaste={(e) => {
               e.preventDefault()
-              onTalk()
-            }
-          }}
-        />
+              const clip = e.clipboardData.getData('text/plain')
+              document.execCommand('insertText', false, clip)
+            }}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                e.preventDefault()
+                onTalk()
+              }
+            }}
+          />
+        )}
+        {!speaking && empty ? (
+          <p className="pointer-events-none absolute top-2 left-1 text-2xl leading-snug font-medium tracking-tight text-neutral-600 sm:text-3xl">
+            Type anything. Talk It! will speak it in the selected voice.
+          </p>
+        ) : null}
       </div>
       {error ? (
         <p className="text-sm font-medium text-white" role="alert">
