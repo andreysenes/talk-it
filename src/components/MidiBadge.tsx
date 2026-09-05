@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { DawMidiHelp } from './DawMidiHelp'
 import { cn } from '../lib/utils'
 import { useMidi } from '../hooks/useMidi'
 import type { MidiNoteEvent } from '../engine/midi'
@@ -111,7 +112,7 @@ export function MidiBadge({
       {open && (
         <div
           role="dialog"
-          className="absolute top-full right-0 z-20 mt-2 w-[min(100vw-2rem,22rem)] border border-neutral-800 bg-[#0c0c0c] p-3"
+          className="absolute top-full right-0 z-20 mt-2 max-h-[min(70vh,36rem)] w-[min(100vw-1.5rem,26rem)] overflow-y-auto border border-neutral-800 bg-[#0c0c0c] p-3"
         >
           <p className="mb-3 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
             DAW · MIDI
@@ -124,6 +125,8 @@ export function MidiBadge({
             </p>
           ) : (
             <div className="flex flex-col gap-3">
+              <DawMidiHelp noPorts={midi.enabled && midi.inputs.length === 0} />
+
               <button
                 type="button"
                 onClick={() => void toggleMidi()}
@@ -218,13 +221,12 @@ export function MidiBadge({
                 <p className="font-mono text-[11px] text-neutral-400">{midi.lastMessage}</p>
               ) : null}
 
+              <DawMidiHelp noPorts={midi.enabled && midi.inputs.length === 0} />
+
               <p className="text-[11px] leading-relaxed text-neutral-500">
                 Note number → pitch (A2 / note 45 = Talk It 100). Velocity → rate (64 ≈
-                150). Mod wheel (CC1) overrides rate. Note on speaks the text box; note
-                off stops. On Mac: enable IAC Driver in Audio MIDI Setup, send MIDI from
-                the DAW here, and set audio out to BlackHole / Loopback so the DAW can
-                record it. Use different IAC buses for in and out if echo is on — a
-                shared bus will loop.
+                150). Mod wheel (CC1) overrides rate. Note on speaks the text; note off
+                stops.
               </p>
             </div>
           )}

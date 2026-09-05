@@ -94,12 +94,16 @@ A browser cannot register itself as a Core Audio / ASIO device. MIDI arrives thr
 
 Use **Chrome or Edge**. Safari and Firefox do not expose Web MIDI in a useful way.
 
-### Mac (Logic, Ableton, Reaper, …)
+### Ableton Live — why Input Ports is empty
+
+Talk It! **will not appear** under Link, Tempo & MIDI → Input Ports / Output Ports. A browser cannot register a Core MIDI device. Live only lists things like your KeyLab, **IAC Driver**, or loopMIDI.
 
 1. Open **Audio MIDI Setup → Window → Show MIDI Studio**. Double-click **IAC Driver** and enable **Device is online**. Add two ports if you want MIDI in and MIDI out without a loop (`Talk It In`, `Talk It Out`).
-2. Install [BlackHole](https://existential.audio/blackhole/) or Loopback. In the DAW, create an audio track whose input is that device.
-3. In Talk It!, open the MIDI badge → **Connect MIDI**. Set **MIDI in** to the IAC port the DAW sends on. Set **Audio to DAW** to BlackHole / Loopback.
-4. In the DAW, put a MIDI track whose output is that IAC port. Put the current phrase in the Talk It! text box. Play notes.
+2. **Quit Live fully** and reopen it. You should now see **IAC Driver Bus 1** in Input Ports and Output Ports — still not a row named Talk It!.
+3. Input Ports: enable **Track** on that IAC bus. Output Ports: enable Track on a *second* IAC bus if you echo notes back (same bus = MIDI loop).
+4. MIDI track in the set → **MIDI To: IAC Driver Bus 1**.
+5. In Talk It!, open the MIDI badge → **Connect MIDI**. Set **MIDI in** to the same IAC port.
+6. Audio back into Live is separate: install [BlackHole](https://existential.audio/blackhole/) or Loopback, pick it in Talk It! **Audio to DAW**, and record an audio track whose input is that device. That device shows up in Live’s **Audio** prefs, not the MIDI port list.
 
 ### What MIDI does
 
