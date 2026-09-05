@@ -99,37 +99,35 @@ export default function App() {
   return (
     <div className="shell min-h-svh px-3 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-        <header className="flex justify-end">
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
           <h1 className="sr-only">Talk It!</h1>
-          <div className="flex flex-col gap-2 sm:items-end">
-            <div className="border border-neutral-800 px-3 py-2 text-xs text-neutral-500">
-              Voice: <span className="text-white">{personality.label}</span>
-              <span className="mx-1.5 text-neutral-700">·</span>
-              {personality.engineName}
-            </div>
-            <MidiBadge
-              audio={audio}
-              onPrimeAudio={() => unlock()}
-              onRateCc={setSpeed}
-              onNoteOn={(event) => {
-                midiNote.current = event.note
-                const nextPitch = Math.round(event.pitch)
-                setPitch(nextPitch)
-                setSpeed(event.speed)
-                void speak(textRef.current, {
-                  ...settingsRef.current,
-                  pitch: nextPitch,
-                  speed: event.speed,
-                })
-              }}
-              onNoteOff={(event) => {
-                if (midiNote.current === event.note) {
-                  midiNote.current = null
-                  stop()
-                }
-              }}
-            />
+          <div className="flex flex-1 items-center border border-neutral-800 px-3 py-2 text-xs text-neutral-500">
+            Voice: <span className="text-white">{personality.label}</span>
+            <span className="mx-1.5 text-neutral-700">·</span>
+            {personality.engineName}
           </div>
+          <MidiBadge
+            audio={audio}
+            onPrimeAudio={() => unlock()}
+            onRateCc={setSpeed}
+            onNoteOn={(event) => {
+              midiNote.current = event.note
+              const nextPitch = Math.round(event.pitch)
+              setPitch(nextPitch)
+              setSpeed(event.speed)
+              void speak(textRef.current, {
+                ...settingsRef.current,
+                pitch: nextPitch,
+                speed: event.speed,
+              })
+            }}
+            onNoteOff={(event) => {
+              if (midiNote.current === event.note) {
+                midiNote.current = null
+                stop()
+              }
+            }}
+          />
         </header>
 
         <main className="talk-panel flex flex-col gap-8 rounded-sm p-4 sm:p-6">

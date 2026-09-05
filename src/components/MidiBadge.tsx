@@ -86,7 +86,7 @@ export function MidiBadge({
   }
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="relative flex-1" ref={rootRef}>
       <button
         type="button"
         aria-expanded={open}
@@ -95,7 +95,7 @@ export function MidiBadge({
           setOpen((v) => !v)
           if (!open) void audio.unlockLabels()
         }}
-        className="w-full border border-neutral-800 px-3 py-2 text-left text-xs text-neutral-500 hover:border-neutral-500 sm:w-auto"
+        className="flex h-full w-full items-center border border-neutral-800 px-3 py-2 text-left text-xs text-neutral-500 hover:border-neutral-500"
       >
         MIDI:{' '}
         <span className={midi.enabled ? 'text-white' : 'text-neutral-400'}>
@@ -220,8 +220,6 @@ export function MidiBadge({
               {midi.lastMessage ? (
                 <p className="font-mono text-[11px] text-neutral-400">{midi.lastMessage}</p>
               ) : null}
-
-              <DawMidiHelp noPorts={midi.enabled && midi.inputs.length === 0} />
 
               <p className="text-[11px] leading-relaxed text-neutral-500">
                 Note number → pitch (A2 / note 45 = Talk It 100). Velocity → rate (64 ≈
