@@ -87,7 +87,9 @@ function WordEditor({
           skipBlur.current = false
           return
         }
-        onCommit(value)
+        const next = value.replace(/\s+/g, ' ').trim()
+        if (next === text) return
+        onCommit(next)
       }}
       onKeyDown={(event) => {
         event.stopPropagation()
@@ -275,6 +277,7 @@ export function TalkPanel({
   const [selectedStart, setSelectedStart] = useState<number | null>(null)
   const editorRef = useRef<HTMLDivElement>(null)
   const textBlockRef = useRef<HTMLDivElement>(null)
+  const selectedWordRef = useRef<HTMLSpanElement>(null)
   const defaults = useMemo(
     () =>
       defaultsFromSettings({
@@ -309,14 +312,23 @@ export function TalkPanel({
     if (selectedStart == null) return
 
     function onPointerDown(event: PointerEvent) {
-      const root = textBlockRef.current
-      if (!root) return
-      if (event.target instanceof Node && root.contains(event.target)) return
+      const root = selectedWordRef.current
+      if (root && event.target instanceof Node && root.contains(event.target)) return
+      setSelectedStart(null)
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
       setSelectedStart(null)
     }
 
     document.addEventListener('pointerdown', onPointerDown)
-    return () => document.removeEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [selectedStart])
 
   useEffect(() => {
@@ -501,15 +513,31 @@ export function TalkPanel({
                   ? wordFill(word.pitch, word.rate, word.language)
                   : undefined
               return (
-                <span key={i} className="relative">
+                <span
+                  key={i}
+                  ref={on ? selectedWordRef : undefined}
+                  className="relative"
+                >
                   {on && !live ? (
-                    <WordEditor
-                      text={word.text}
-                      style={fill}
-                      className={cn(word.muted && 'opacity-50')}
-                      onCommit={renameSelected}
-                      onDeselect={() => setSelectedStart(null)}
-                    />
+                    [
+                      <WordEditor
+                        key="edit"
+                        text={word.text}
+                        style={fill}
+                        className={cn(word.muted && 'opacity-50')}
+                        onCommit={renameSelected}
+                        onDeselect={() => setSelectedStart(null)}
+                      />,
+                      <WordMenu key="menu">
+                        <CommandButtons
+                          state={word}
+                          muted={word.muted}
+                          onPatch={(patch) => applyToSelected(patch)}
+                          onReset={resetSelected}
+                          onToggleMuted={toggleSelectedMuted}
+                        />
+                      </WordMenu>,
+                    ]
                   ) : (
                     <button
                       type="button"
@@ -529,21 +557,10 @@ export function TalkPanel({
                       {word.text}
                     </button>
                   )}
-                  {on && !live ? (
-                    <WordMenu>
-                      <CommandButtons
-                        state={word}
-                        muted={word.muted}
-                        onPatch={(patch) => applyToSelected(patch)}
-                        onReset={resetSelected}
-                        onToggleMuted={toggleSelectedMuted}
-                      />
-                    </WordMenu>
-                  ) : null}
                 </span>
               )
             })}
-            {live ? null : (
+            {live || selectedStart != null ? null : (
               <LineComposer
                 key={activePad}
                 onFocus={() => setSelectedStart(null)}

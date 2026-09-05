@@ -96,6 +96,17 @@ if (visible(appended) !== "I'll take you home") {
 }
 if (!appended.includes('{{pitch 220}}')) throw new Error(`append lost pitch: ${appended}`)
 
+const tagged = setWordVoice(
+  'La cocaína no',
+  'La '.length,
+  { language: 'spanish', quality: 'monotone', pitch: 66, scale: 0.78 },
+  defaults,
+)
+if (visible(tagged.next) !== 'La cocaína no') {
+  throw new Error(`tagged spaces: ${JSON.stringify(visible(tagged.next))} source=${tagged.next}`)
+}
+if (/  /.test(visible(tagged.next))) throw new Error(`double space: ${visible(tagged.next)}`)
+
 if (take.muted) throw new Error('take should start enabled')
 const muted = setWordMuted(text, take.start, true, inherited)
 if (!muted.next.includes('{{.pitch 220}}')) throw new Error(`mute serialize: ${muted.next}`)
