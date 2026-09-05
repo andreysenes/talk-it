@@ -38,19 +38,22 @@ const EXAMPLES = [
 
 function WordMenu({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [alignRight, setAlignRight] = useState(false)
+  const [side, setSide] = useState<'right' | 'left'>('right')
 
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
     const rect = el.getBoundingClientRect()
-    setAlignRight(rect.right > window.innerWidth - 16)
+    setSide(rect.right > window.innerWidth - 16 ? 'left' : 'right')
   }, [])
 
   return (
     <div
       ref={ref}
-      className={cn('absolute top-full z-40 mt-1', alignRight ? 'right-0' : 'left-0')}
+      className={cn(
+        'absolute top-0 z-40',
+        side === 'right' ? 'left-full ml-1.5' : 'right-full mr-1.5',
+      )}
     >
       {children}
     </div>
