@@ -239,23 +239,40 @@ export default function App() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
         <h1 className="sr-only">Talk It!</h1>
         <main className="talk-panel flex flex-col gap-8 rounded-sm p-4 sm:p-6">
-          <PersonalityGrid
-            selectedId={personality.id}
+          <TalkPanel
+            text={text}
+            onText={setText}
             pitch={pitch}
             speed={speed}
+            language={language}
+            personality={personality}
             pitchQuality={pitchQuality}
             vocalEffort={vocalEffort}
             vibrato={vibrato}
             vibratoRate={vibratoRate}
             scale={scale}
-            onSelect={selectPersonality}
-            onPitch={setPitch}
-            onSpeed={setSpeed}
-            onPitchQuality={setPitchQuality}
-            onVocalEffort={setVocalEffort}
-            onVibrato={setVibrato}
-            onVibratoRate={setVibratoRate}
-            onScale={setScale}
+            speaking={state === 'speaking'}
+            paused={state === 'paused'}
+            error={error}
+            highlight={highlight}
+            onTalk={() => {
+              if (state === 'paused') void resume()
+              else void speak(text, settings)
+            }}
+            onSpeakWord={(snippet) => void speak(snippet, settings)}
+            onPause={() => void pause()}
+            onResume={() => void resume()}
+            pads={pads}
+            activePad={activePad}
+            onSelectPad={selectPad}
+            onClearPad={(index) => {
+              setPads((prev) => {
+                const next = [...prev]
+                next[index] = emptyPad()
+                return next
+              })
+              if (index === activePad) setText('')
+            }}
           />
           <TalkActions
             speaking={state === 'speaking'}
@@ -296,46 +313,29 @@ export default function App() {
               />
             }
           />
-          <ParameterPanel
-            language={language}
-            vintage={vintage}
-            onLanguage={setLanguage}
-            onVintage={setVintage}
-          />
-          <TalkPanel
-            text={text}
-            onText={setText}
+          <PersonalityGrid
+            selectedId={personality.id}
             pitch={pitch}
             speed={speed}
-            language={language}
-            personality={personality}
             pitchQuality={pitchQuality}
             vocalEffort={vocalEffort}
             vibrato={vibrato}
             vibratoRate={vibratoRate}
             scale={scale}
-            speaking={state === 'speaking'}
-            paused={state === 'paused'}
-            error={error}
-            highlight={highlight}
-            onTalk={() => {
-              if (state === 'paused') void resume()
-              else void speak(text, settings)
-            }}
-            onSpeakWord={(snippet) => void speak(snippet, settings)}
-            onPause={() => void pause()}
-            onResume={() => void resume()}
-            pads={pads}
-            activePad={activePad}
-            onSelectPad={selectPad}
-            onClearPad={(index) => {
-              setPads((prev) => {
-                const next = [...prev]
-                next[index] = emptyPad()
-                return next
-              })
-              if (index === activePad) setText('')
-            }}
+            onSelect={selectPersonality}
+            onPitch={setPitch}
+            onSpeed={setSpeed}
+            onPitchQuality={setPitchQuality}
+            onVocalEffort={setVocalEffort}
+            onVibrato={setVibrato}
+            onVibratoRate={setVibratoRate}
+            onScale={setScale}
+          />
+          <ParameterPanel
+            language={language}
+            vintage={vintage}
+            onLanguage={setLanguage}
+            onVintage={setVintage}
           />
         </main>
       </div>
