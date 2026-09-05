@@ -88,7 +88,7 @@ SoftVoice allowed commands in `{{braces}}`. Supported here:
 {{breath 0.4}} {{tilt 0.08}} {{effort 0.5}}
 ```
 
-Tap a word to set any of these on that word. Commands stay grouped with that word and stay hidden in the line. There is no double-click source editor — click a word to change its voice, or type at the end of the line to add words.
+Tap a word to set any of these on that word. **Reset** restores the personality default. **Off** keeps the values saved but silent until **On**. Commands stay grouped with that word and stay hidden in the line. There is no double-click source editor — click a word to change its voice, or type at the end of the line to add words.
 
 ## Why not load the DLL on Mac?
 

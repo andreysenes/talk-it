@@ -36,9 +36,9 @@ export type VoicePatch = Partial<VoiceState>
 
 export type ParsedPart =
   | { kind: 'text'; text: string; start: number; end: number }
-  | { kind: 'cmd'; name: string; value: number | null; start: number; end: number }
+  | { kind: 'cmd'; name: string; value: number | null; start: number; end: number; disabled?: boolean }
 
-export const COMMAND_RE = /\{\{\s*[a-z]+(?:\s+-?\d+(?:\.\d+)?)?\s*\}\}/gi
+export const COMMAND_RE = /\{\{\s*\.?[a-z]+(?:\s+-?\d+(?:\.\d+)?)?\s*\}\}/gi
 
 const FLAG_TO_FIELD = {
   spanish: ['language', 'spanish'],
@@ -244,16 +244,17 @@ export function parseEmbedded(text: string): ParsedPart[] {
     const start = match.index
     const end = match.index + match[0].length
     const inner = match[0].slice(2, -2).trim()
-    const parsed = inner.match(/^([a-z]+)(?:\s+(-?\d+(?:\.\d+)?))?$/i)
-    const name = parsed?.[1]?.toLowerCase() ?? ''
-    const raw = parsed?.[2]
+    const parsed = inner.match(/^(\.?)([a-z]+)(?:\s+(-?\d+(?:\.\d+)?))?$/i)
+    const disabled = parsed?.[1] === '.'
+    const name = parsed?.[2]?.toLowerCase() ?? ''
+    const raw = parsed?.[3]
     if (name in FLAG_TO_FIELD && raw === undefined) {
-      out.push({ kind: 'cmd', name, value: null, start, end })
+      out.push({ kind: 'cmd', name, value: null, start, end, disabled })
     } else if (name in NUMBER_FIELDS && raw !== undefined) {
       const value = Number(raw)
       if (Number.isFinite(value)) {
         const skipZero = name === 'pitch' || name === 'rate' || name === 'speed'
-        if (!skipZero || value !== 0) out.push({ kind: 'cmd', name, value, start, end })
+        if (!skipZero || value !== 0) out.push({ kind: 'cmd', name, value, start, end, disabled })
       }
     }
     last = end
@@ -359,16 +360,26 @@ const SERIALIZE_NUM: Array<{ key: keyof CommandBag; name: string; digits: number
   { key: 'effort', name: 'effort', digits: 2 },
 ]
 
-export function serializeBag(bag: CommandBag): string {
+export function serializeBag(bag: CommandBag, muted = false): string {
+  const wrap = (inner: string) => (muted ? `{{.${inner}}}` : `{{${inner}}}`)
   const bits: string[] = []
-  if (bag.language) bits.push(`{{${bag.language}}}`)
-  if (bag.quality) bits.push(`{{${bag.quality}}}`)
-  if (bag.mix) bits.push(`{{${bag.mix}}}`)
+  if (bag.language) bits.push(wrap(bag.language))
+  if (bag.quality) bits.push(wrap(bag.quality))
+  if (bag.mix) bits.push(wrap(bag.mix))
   for (const item of SERIALIZE_NUM) {
     const value = bag[item.key]
-    if (typeof value === 'number') bits.push(`{{${item.name} ${fmt(value, item.digits)}}}`)
+    if (typeof value === 'number') bits.push(wrap(`${item.name} ${fmt(value, item.digits)}`))
   }
   return bits.length ? bits.join(' ') : ''
+}
+
+export function regionIsMuted(region: string): boolean {
+  const cmds = parseEmbedded(region).filter((part) => part.kind === 'cmd')
+  return cmds.some((part) => part.kind === 'cmd' && part.disabled)
+}
+
+export function bagHasValues(bag: CommandBag): boolean {
+  return Object.values(bag).some((value) => value != null)
 }
 
 export function mergeBag(existing: CommandBag, patch: VoicePatch): CommandBag {
@@ -407,7 +418,7 @@ export function stripInherited(bag: CommandBag, inherited: VoiceState): CommandB
   }
 }
 
-export const CMD_AT_END = /\{\{\s*[a-z]+(?:\s+-?\d+(?:\.\d+)?)?\s*\}\}\s*$/i
+export const CMD_AT_END = /\{\{\s*\.?[a-z]+(?:\s+-?\d+(?:\.\d+)?)?\s*\}\}\s*$/i
 
 export const NUMBER_DIGITS: Record<
   'pitch' | 'rate' | 'scale' | 'vibrato' | 'vibrate' | 'tremolo' | 'trrate' | 'breath' | 'tilt' | 'effort',

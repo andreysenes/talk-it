@@ -179,6 +179,7 @@ function planUtterance(
     const part = parts[i]
     if (!part) continue
     if (part.kind === 'cmd') {
+      if (part.disabled) continue
       const before = state
       state = applyParsedCommand(state, part.name, part.value)
       if (part.name === 'sung') state = { ...state, vibrato: Math.max(state.vibrato, 4) }

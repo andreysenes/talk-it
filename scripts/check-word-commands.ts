@@ -3,6 +3,8 @@ import {
   appendVisible,
   inheritedBeforeWord,
   replaceWordText,
+  resetWordVoice,
+  setWordMuted,
   setWordVoice,
   wordSpeakSnippet,
   wordsFromPieces,
@@ -94,4 +96,41 @@ if (visible(appended) !== "I'll take you home") {
 }
 if (!appended.includes('{{pitch 220}}')) throw new Error(`append lost pitch: ${appended}`)
 
-console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next, snippet }))
+if (take.muted) throw new Error('take should start enabled')
+const muted = setWordMuted(text, take.start, true, inherited)
+if (!muted.next.includes('{{.pitch 220}}')) throw new Error(`mute serialize: ${muted.next}`)
+const mutedTake = wordsFromPieces(annotateWords(muted.next, defaults)).find((w) => w.text === 'take')
+if (!mutedTake?.muted || mutedTake.pitch !== 220) throw new Error(`muted take: ${JSON.stringify(mutedTake)}`)
+const mutedYou = wordsFromPieces(annotateWords(muted.next, defaults)).find((w) => w.text === 'you')
+if (mutedYou?.hasPitch || mutedYou?.pitch !== 100) throw new Error(`mute leaked: ${JSON.stringify(mutedYou)}`)
+if (visible(muted.next) !== "I'll take you to the candy shop.") {
+  throw new Error(`mute display: ${visible(muted.next)}`)
+}
+const mutedSnippet = wordSpeakSnippet(muted.next, mutedTake.start, mutedTake.end)
+if (mutedSnippet.includes('pitch')) throw new Error(`muted snippet: ${mutedSnippet}`)
+
+const patchedMute = setWordVoice(
+  muted.next,
+  muted.wordStart,
+  { pitch: 80 },
+  inheritedBeforeWord(muted.next, muted.wordStart, defaults),
+)
+if (!patchedMute.next.includes('{{.pitch 80}}')) throw new Error(`patch muted: ${patchedMute.next}`)
+
+const enabled = setWordMuted(
+  muted.next,
+  muted.wordStart,
+  false,
+  inheritedBeforeWord(muted.next, muted.wordStart, defaults),
+)
+if (!enabled.next.includes('{{pitch 220}}') || enabled.next.includes('{{.pitch')) {
+  throw new Error(`enable: ${enabled.next}`)
+}
+
+const reset = resetWordVoice(text, take.start)
+if (/\{\{/.test(reset.next)) throw new Error(`reset: ${reset.next}`)
+if (visible(reset.next) !== "I'll take you to the candy shop.") {
+  throw new Error(`reset display: ${visible(reset.next)}`)
+}
+
+console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next, snippet, muted: muted.next }))

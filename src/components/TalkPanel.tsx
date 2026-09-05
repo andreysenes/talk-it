@@ -12,6 +12,8 @@ import {
   appendVisible,
   inheritedBeforeWord,
   replaceWordText,
+  resetWordVoice,
+  setWordMuted,
   setWordVoice,
   wordFill,
   wordIsMarked,
@@ -358,6 +360,25 @@ export function TalkPanel({
     onText(result.next)
   }
 
+  function resetSelected() {
+    if (selectedStart == null) return
+    const result = resetWordVoice(text, selectedStart)
+    setSelectedStart(result.wordStart)
+    onText(result.next)
+  }
+
+  function toggleSelectedMuted() {
+    if (selectedStart == null) return
+    const word = pieces.find(
+      (piece) => piece.kind === 'word' && piece.word.start === selectedStart,
+    )
+    if (!word || word.kind !== 'word') return
+    const inherited = inheritedBeforeWord(text, selectedStart, defaults)
+    const result = setWordMuted(text, selectedStart, !word.word.muted, inherited)
+    setSelectedStart(result.wordStart)
+    onText(result.next)
+  }
+
   function renameSelected(nextText: string) {
     if (selectedStart == null) return
     const word = pieces.find(
@@ -453,14 +474,20 @@ export function TalkPanel({
                 highlight.start < word.end &&
                 highlight.end > word.start
               const on = selectedStart === word.start
-              const fill = marked ? wordFill(word.pitch, word.rate, word.language) : undefined
+              const fill =
+                marked && !word.muted
+                  ? wordFill(word.pitch, word.rate, word.language)
+                  : undefined
               return (
                 <span key={i} className="relative">
                   {on ? (
                     <WordEditor
                       text={word.text}
                       style={fill}
-                      className={cn(spoken && 'outline outline-1 outline-offset-1 outline-neutral-400')}
+                      className={cn(
+                        spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
+                        word.muted && 'opacity-50',
+                      )}
                       onCommit={renameSelected}
                       onDeselect={() => setSelectedStart(null)}
                     />
@@ -475,6 +502,7 @@ export function TalkPanel({
                         wordClass,
                         'cursor-pointer',
                         spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
+                        word.muted && 'opacity-50',
                         !marked && !spoken && 'hover:bg-neutral-800',
                       )}
                     >
@@ -485,7 +513,10 @@ export function TalkPanel({
                     <WordMenu>
                       <CommandButtons
                         state={word}
+                        muted={word.muted}
                         onPatch={(patch) => applyToSelected(patch)}
+                        onReset={resetSelected}
+                        onToggleMuted={toggleSelectedMuted}
                       />
                     </WordMenu>
                   ) : null}

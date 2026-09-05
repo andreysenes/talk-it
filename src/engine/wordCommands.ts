@@ -1,10 +1,12 @@
 import {
   applyParsedCommand,
   bagFromRegion,
+  bagHasValues,
   CMD_AT_END,
   FALLBACK_VOICE,
   mergeBag,
   parseEmbedded,
+  regionIsMuted,
   serializeBag,
   stripInherited,
   type VoicePatch,
@@ -29,6 +31,7 @@ export type WordVoice = VoiceState & {
   hasBreath: boolean
   hasTilt: boolean
   hasEffort: boolean
+  muted: boolean
 }
 
 export type VoiceDefaults = VoiceState
@@ -51,6 +54,23 @@ const CLEAR_FLAGS = {
   hasBreath: false,
   hasTilt: false,
   hasEffort: false,
+  muted: false,
+}
+
+function markPending(pending: typeof CLEAR_FLAGS, name: string) {
+  if (name === 'spanish' || name === 'english') pending.hasLanguage = true
+  else if (name === 'natural' || name === 'monotone' || name === 'sung') pending.hasQuality = true
+  else if (name === 'normal' || name === 'breathy' || name === 'whispered') pending.hasMix = true
+  else if (name === 'pitch') pending.hasPitch = true
+  else if (name === 'rate' || name === 'speed') pending.hasRate = true
+  else if (name === 'scale') pending.hasScale = true
+  else if (name === 'vibrato') pending.hasVibrato = true
+  else if (name === 'vibrate') pending.hasVibrate = true
+  else if (name === 'tremolo') pending.hasTremolo = true
+  else if (name === 'trrate') pending.hasTrrate = true
+  else if (name === 'breath') pending.hasBreath = true
+  else if (name === 'tilt') pending.hasTilt = true
+  else if (name === 'effort') pending.hasEffort = true
 }
 
 export function annotateWords(source: string, defaults: VoiceDefaults): DisplayPiece[] {
@@ -58,27 +78,19 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
   const pieces: DisplayPiece[] = []
   let state: VoiceState = { ...FALLBACK_VOICE, ...defaults }
   let pending = { ...CLEAR_FLAGS }
+  let overlay: VoiceState | null = null
   let skipLeadingSpace = false
 
   for (const part of parts) {
     if (part.kind === 'cmd') {
-      state = applyParsedCommand(state, part.name, part.value)
-      if (part.name === 'spanish' || part.name === 'english') pending.hasLanguage = true
-      else if (part.name === 'natural' || part.name === 'monotone' || part.name === 'sung') {
-        pending.hasQuality = true
-      } else if (part.name === 'normal' || part.name === 'breathy' || part.name === 'whispered') {
-        pending.hasMix = true
-      } else if (part.name === 'pitch') pending.hasPitch = true
-      else if (part.name === 'rate' || part.name === 'speed') pending.hasRate = true
-      else if (part.name === 'scale') pending.hasScale = true
-      else if (part.name === 'vibrato') pending.hasVibrato = true
-      else if (part.name === 'vibrate') pending.hasVibrate = true
-      else if (part.name === 'tremolo') pending.hasTremolo = true
-      else if (part.name === 'trrate') pending.hasTrrate = true
-      else if (part.name === 'breath') pending.hasBreath = true
-      else if (part.name === 'tilt') pending.hasTilt = true
-      else if (part.name === 'effort') pending.hasEffort = true
+      markPending(pending, part.name)
       skipLeadingSpace = true
+      if (part.disabled) {
+        pending.muted = true
+        overlay = applyParsedCommand(overlay ?? state, part.name, part.value)
+        continue
+      }
+      state = applyParsedCommand(state, part.name, part.value)
       continue
     }
 
@@ -109,11 +121,12 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
           start,
           end,
           text: chunk,
-          ...state,
+          ...(pending.muted && overlay ? overlay : state),
           ...pending,
         },
       })
       pending = { ...CLEAR_FLAGS }
+      overlay = null
     }
   }
 
@@ -126,6 +139,7 @@ export function wordsFromPieces(pieces: DisplayPiece[]): WordVoice[] {
 
 export function wordIsMarked(word: WordVoice): boolean {
   return (
+    word.muted ||
     word.hasLanguage ||
     word.hasQuality ||
     word.hasMix ||
@@ -198,8 +212,43 @@ export function setWordVoice(
   inherited: VoiceDefaults,
 ): { next: string; wordStart: number } {
   const { regionStart } = commandRegion(source, wordStart)
+  const region = source.slice(regionStart, wordStart)
+  const existing = bagFromRegion(region)
+  const muted = regionIsMuted(region)
+  const insert = serializeBag(stripInherited(mergeBag(existing, patch), inherited), muted)
+  return spliceRegion(source, regionStart, wordStart, insert)
+}
+
+export function resetWordVoice(
+  source: string,
+  wordStart: number,
+): { next: string; wordStart: number } {
+  const { regionStart } = commandRegion(source, wordStart)
+  return spliceRegion(source, regionStart, wordStart, '')
+}
+
+export function setWordMuted(
+  source: string,
+  wordStart: number,
+  muted: boolean,
+  inherited: VoiceDefaults,
+): { next: string; wordStart: number } {
+  const { regionStart } = commandRegion(source, wordStart)
   const existing = bagFromRegion(source.slice(regionStart, wordStart))
-  const insert = serializeBag(stripInherited(mergeBag(existing, patch), inherited))
+  const stripped = stripInherited(existing, inherited)
+  const bag = bagHasValues(stripped) ? stripped : mergeBag(existing, inherited)
+  if (!muted && !bagHasValues(stripped)) {
+    return spliceRegion(source, regionStart, wordStart, '')
+  }
+  return spliceRegion(source, regionStart, wordStart, serializeBag(bag, muted))
+}
+
+function spliceRegion(
+  source: string,
+  regionStart: number,
+  wordStart: number,
+  insert: string,
+): { next: string; wordStart: number } {
   const before = source.slice(0, regionStart)
   const rest = source.slice(wordStart)
   const next = insert
@@ -216,7 +265,7 @@ export function wordSpeakSnippet(source: string, wordStart: number, wordEnd: num
   const cmds: string[] = []
   for (const part of parts) {
     if (part.end > wordStart) break
-    if (part.kind === 'cmd') cmds.push(source.slice(part.start, part.end))
+    if (part.kind === 'cmd' && !part.disabled) cmds.push(source.slice(part.start, part.end))
   }
   const word = source.slice(wordStart, wordEnd).trim()
   if (!word) return cmds.join(' ')

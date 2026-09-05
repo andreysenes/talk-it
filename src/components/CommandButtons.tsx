@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Power, RotateCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DragSlider } from './DragSlider'
 import { cn } from '../lib/utils'
@@ -53,10 +53,16 @@ function ChoiceChip({
 
 export function CommandButtons({
   state,
+  muted = false,
   onPatch,
+  onReset,
+  onToggleMuted,
 }: {
   state: VoiceState
+  muted?: boolean
   onPatch: (patch: VoicePatch) => void
+  onReset: () => void
+  onToggleMuted: () => void
 }) {
   const [open, setOpen] = useState<ChipId | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -92,53 +98,89 @@ export function CommandButtons({
       ref={rootRef}
       className="flex max-h-[min(70vh,28rem)] w-max flex-col gap-1 overflow-y-auto rounded-sm bg-[#0c0c0c] p-1 shadow-lg shadow-black/60"
     >
-      {COMMAND_CHIPS.map((chip) =>
-        chip.kind === 'number' ? (
-          <DragSlider
-            key={chip.id}
-            label={chip.label}
-            token={chip.token(state)}
-            value={state[chip.id] as number}
-            min={chip.min ?? 0}
-            max={chip.max ?? 1}
-            step={chip.step ?? 0.01}
-            onChange={(n) => onPatch({ [chip.id]: n } as VoicePatch)}
-          />
-        ) : (
-          <div key={chip.id} className="flex w-full flex-col gap-1">
-            <ChoiceChip
+      <div className="flex gap-1">
+        <button
+          type="button"
+          title="Reset this word to the personality default"
+          aria-label="Reset to default"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-sm border border-neutral-800 px-2 py-1.5 text-neutral-400 hover:border-white hover:text-white"
+          onClick={onReset}
+        >
+          <RotateCcw className="size-3.5" />
+          <span className="text-[10px] font-medium tracking-[0.14em] uppercase">Reset</span>
+        </button>
+        <button
+          type="button"
+          title={
+            muted
+              ? 'Enable saved parameters on this word'
+              : 'Disable parameters but keep them saved'
+          }
+          aria-label={muted ? 'Enable parameters' : 'Disable parameters'}
+          aria-pressed={!muted}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-1.5 rounded-sm border px-2 py-1.5',
+            muted
+              ? 'border-neutral-700 text-neutral-500 hover:border-white hover:text-white'
+              : 'border-white bg-white text-black',
+          )}
+          onClick={onToggleMuted}
+        >
+          <Power className="size-3.5" />
+          <span className="text-[10px] font-medium tracking-[0.14em] uppercase">
+            {muted ? 'Off' : 'On'}
+          </span>
+        </button>
+      </div>
+      <div className={cn('flex flex-col gap-1', muted && 'opacity-50')}>
+        {COMMAND_CHIPS.map((chip) =>
+          chip.kind === 'number' ? (
+            <DragSlider
+              key={chip.id}
               label={chip.label}
               token={chip.token(state)}
-              open={open === chip.id}
-              onToggle={() => toggle(chip.id)}
+              value={state[chip.id] as number}
+              min={chip.min ?? 0}
+              max={chip.max ?? 1}
+              step={chip.step ?? 0.01}
+              onChange={(n) => onPatch({ [chip.id]: n } as VoicePatch)}
             />
-            {open === chip.id && chip.choices ? (
-              <div className={panelClass} role="dialog">
-                <div className="flex flex-col gap-2">
-                  {chip.choices.map((choice) => {
-                    const on = state[chip.id] === choice.id
-                    return (
-                      <button
-                        key={choice.id}
-                        type="button"
-                        className={cn(
-                          'rounded-sm px-3 py-1.5 text-xs font-medium',
-                          on
-                            ? 'bg-white text-black'
-                            : 'border border-neutral-800 text-neutral-400 hover:text-white',
-                        )}
-                        onClick={() => onPatch({ [chip.id]: choice.id } as VoicePatch)}
-                      >
-                        {choice.label}
-                      </button>
-                    )
-                  })}
+          ) : (
+            <div key={chip.id} className="flex w-full flex-col gap-1">
+              <ChoiceChip
+                label={chip.label}
+                token={chip.token(state)}
+                open={open === chip.id}
+                onToggle={() => toggle(chip.id)}
+              />
+              {open === chip.id && chip.choices ? (
+                <div className={panelClass} role="dialog">
+                  <div className="flex flex-col gap-2">
+                    {chip.choices.map((choice) => {
+                      const on = state[chip.id] === choice.id
+                      return (
+                        <button
+                          key={choice.id}
+                          type="button"
+                          className={cn(
+                            'rounded-sm px-3 py-1.5 text-xs font-medium',
+                            on
+                              ? 'bg-white text-black'
+                              : 'border border-neutral-800 text-neutral-400 hover:text-white',
+                          )}
+                          onClick={() => onPatch({ [chip.id]: choice.id } as VoicePatch)}
+                        >
+                          {choice.label}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
-        ),
-      )}
+              ) : null}
+            </div>
+          ),
+        )}
+      </div>
     </div>
   )
 }
