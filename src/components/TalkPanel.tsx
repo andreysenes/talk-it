@@ -1,6 +1,7 @@
 import { Download, Square, Volume2 } from 'lucide-react'
 import { useRef, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
+import { VolumeControl } from './VolumeControl'
 import { Button } from './ui/button'
 import { cn } from '../lib/utils'
 import type { Language } from '../engine/personalities'
@@ -51,6 +52,8 @@ export function TalkPanel({
   onStop,
   onExport,
   midi,
+  volume,
+  onVolume,
 }: {
   text: string
   onText: (v: string) => void
@@ -65,6 +68,8 @@ export function TalkPanel({
   onStop: () => void
   onExport: () => void
   midi: ReactNode
+  volume: number
+  onVolume: (n: number) => void
 }) {
   const busy = speaking || rendering || exporting
   const empty = !text.trim()
@@ -152,6 +157,7 @@ export function TalkPanel({
           {exporting ? 'Exporting…' : 'Export WAV'}
         </Button>
         {midi}
+        <VolumeControl value={volume} onChange={onVolume} />
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">

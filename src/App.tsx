@@ -25,6 +25,7 @@ type Saved = {
   language: Language
   vintage: boolean
   text: string
+  volume: number
 }
 
 function loadSaved(): Partial<Saved> {
@@ -55,9 +56,16 @@ export default function App() {
   const [text, setText] = useState(
     saved.text ?? 'All your base are belong to us.',
   )
+  const [volume, setVolume] = useState(() => {
+    const n = saved.volume
+    return typeof n === 'number' && Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 100
+  })
 
   const audio = useAudioOutputs()
-  const { state, error, speak, stop, exportWav, unlock } = useTalkEngine(audio.sinkId)
+  const { state, error, speak, stop, exportWav, unlock } = useTalkEngine(
+    audio.sinkId,
+    volume / 100,
+  )
   const midiNote = useRef<number | null>(null)
 
   const settings = {
@@ -84,9 +92,10 @@ export default function App() {
       language,
       vintage,
       text,
+      volume,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [personality, pitch, speed, pitchQuality, vocalEffort, language, vintage, text])
+  }, [personality, pitch, speed, pitchQuality, vocalEffort, language, vintage, text, volume])
 
   function selectPersonality(p: Personality) {
     setPersonality(p)
@@ -134,6 +143,8 @@ export default function App() {
             onTalk={() => void speak(text, settings)}
             onStop={stop}
             onExport={() => void exportWav(text, settings)}
+            volume={volume}
+            onVolume={setVolume}
             midi={
               <MidiBadge
                 audio={audio}

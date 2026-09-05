@@ -50,3 +50,26 @@ input[type='number'] {
   background: #fff;
   color: #000;
 }
+
+.volume-slider {
+  appearance: none;
+  height: 2px;
+  background: #333;
+  outline: none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  background: #fff;
+  cursor: pointer;
+}
