@@ -274,6 +274,47 @@ function timedWords(
   })
 }
 
+/** Map elapsed time on an old render onto the equivalent offset (seconds) in a new render. */
+export function mapPlayOffsetSec(
+  elapsedMs: number,
+  oldWords: SpokenWord[],
+  newWords: SpokenWord[],
+): number | null {
+  if (!newWords.length) return null
+  if (!oldWords.length) return 0
+  const oldLast = oldWords[oldWords.length - 1]!
+  if (elapsedMs >= oldLast.endMs) return null
+
+  const oldFirst = oldWords[0]!
+  const newFirst = newWords[0]!
+  if (elapsedMs <= oldFirst.startMs) {
+    if (oldFirst.startMs <= 0) return newFirst.startMs / 1000
+    return ((elapsedMs / oldFirst.startMs) * newFirst.startMs) / 1000
+  }
+
+  let index = 0
+  for (let i = 0; i < oldWords.length; i++) {
+    if (elapsedMs >= oldWords[i]!.startMs) index = i
+    else break
+  }
+  const oldWord = oldWords[index]!
+  const matchByStart = newWords.find((word) => word.start === oldWord.start)
+  const newWord = matchByStart ?? newWords[Math.min(index, newWords.length - 1)]!
+
+  if (elapsedMs >= oldWord.endMs) {
+    const next = oldWords[index + 1]
+    if (!next) return null
+    const nextNew =
+      newWords.find((word) => word.start === next.start) ??
+      newWords[Math.min(index + 1, newWords.length - 1)]!
+    return nextNew.startMs / 1000
+  }
+
+  const span = Math.max(1, oldWord.endMs - oldWord.startMs)
+  const progress = Math.min(1, Math.max(0, (elapsedMs - oldWord.startMs) / span))
+  return (newWord.startMs + progress * Math.max(0, newWord.endMs - newWord.startMs)) / 1000
+}
+
 export function renderUtterance(
   text: string,
   settings: TalkSettings,

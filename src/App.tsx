@@ -116,7 +116,7 @@ export default function App() {
   const [volume, setVolume] = useState(boot.volume)
 
   const audio = useAudioOutputs()
-  const { state, error, speak, stop, pause, resume, exportWav, unlock, highlight, analyser } =
+  const { state, error, speak, stop, pause, resume, retune, exportWav, unlock, highlight, analyser } =
     useTalkEngine(audio.sinkId, volume / 100)
   const midiNote = useRef<number | null>(null)
 
@@ -139,6 +139,22 @@ export default function App() {
   textRef.current = text
   const voiceRef = useRef(voice)
   voiceRef.current = voice
+
+  useEffect(() => {
+    retune(settings)
+  }, [
+    retune,
+    personality.id,
+    pitch,
+    speed,
+    pitchQuality,
+    vocalEffort,
+    language,
+    vintage,
+    vibrato,
+    vibratoRate,
+    scale,
+  ])
 
   useEffect(() => {
     const payload: Saved = {
