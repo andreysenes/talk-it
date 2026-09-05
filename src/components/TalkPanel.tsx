@@ -1,10 +1,18 @@
 import { Download, Square, Volume2 } from 'lucide-react'
-import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
 import { VolumeControl } from './VolumeControl'
 import { Button } from './ui/button'
 import { cn } from '../lib/utils'
 import type { Language } from '../engine/personalities'
+import {
+  annotateWords,
+  inheritedBeforeWord,
+  setWordVoice,
+  wordFill,
+  wordSummary,
+  type WordVoice,
+} from '../engine/wordCommands'
 
 const EXAMPLES = [
   {
@@ -32,75 +40,6 @@ const EXAMPLES = [
 const editorClass =
   'w-full min-h-[1.25em] px-0 py-1 font-sans text-2xl leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:text-3xl'
 
-function WordHighlight({
-  text,
-  start,
-  end,
-}: {
-  text: string
-  start: number | null
-  end: number | null
-}) {
-  if (start == null || end == null || end <= start) return text
-  return (
-    <>
-      {text.slice(0, start)}
-      <mark className="box-decoration-clone rounded-[2px] bg-neutral-600 px-0.5 text-white">
-        {text.slice(start, end)}
-      </mark>
-      {text.slice(end)}
-    </>
-  )
-}
-
-function insertToken(text: string, token: string, start: number, end: number) {
-  const before = text.slice(0, start)
-  const after = text.slice(end)
-  const lead = before.length > 0 && !/\s$/.test(before) ? ' ' : ''
-  const trail = after.length > 0 && !/^\s/.test(after) ? ' ' : ''
-  const inserted = `${lead}${token}${trail}`
-  return { next: before + inserted + after, caret: before.length + inserted.length }
-}
-
-function caretOffsets(el: HTMLElement, fallback: number) {
-  const sel = window.getSelection()
-  if (!sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) {
-    return { start: fallback, end: fallback }
-  }
-  const range = sel.getRangeAt(0)
-  const pre = range.cloneRange()
-  pre.selectNodeContents(el)
-  pre.setEnd(range.startContainer, range.startOffset)
-  const start = pre.toString().length
-  return { start, end: start + range.toString().length }
-}
-
-function placeCaret(el: HTMLElement, offset: number) {
-  const sel = window.getSelection()
-  if (!sel) return
-  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
-  let pos = 0
-  let node = walker.nextNode()
-  while (node) {
-    const len = node.textContent?.length ?? 0
-    if (pos + len >= offset) {
-      const range = document.createRange()
-      range.setStart(node, Math.max(0, offset - pos))
-      range.collapse(true)
-      sel.removeAllRanges()
-      sel.addRange(range)
-      return
-    }
-    pos += len
-    node = walker.nextNode()
-  }
-  const range = document.createRange()
-  range.selectNodeContents(el)
-  range.collapse(false)
-  sel.removeAllRanges()
-  sel.addRange(range)
-}
-
 export function TalkActions({
   speaking,
   rendering,
@@ -127,33 +66,15 @@ export function TalkActions({
   const busy = speaking || rendering || exporting
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button
-        type="button"
-        variant="talk"
-        size="lg"
-        disabled={busy || empty}
-        onClick={onTalk}
-      >
+      <Button type="button" variant="talk" size="lg" disabled={busy || empty} onClick={onTalk}>
         <Volume2 className="size-5" />
         {rendering ? 'Building voice…' : speaking ? 'Talking…' : 'Talk It!'}
       </Button>
-      <Button
-        type="button"
-        variant="stop"
-        size="lg"
-        disabled={!speaking}
-        onClick={onStop}
-      >
+      <Button type="button" variant="stop" size="lg" disabled={!speaking} onClick={onStop}>
         <Square className="size-4 fill-current" />
         Stop
       </Button>
-      <Button
-        type="button"
-        variant="export"
-        size="lg"
-        disabled={busy || empty}
-        onClick={onExport}
-      >
+      <Button type="button" variant="export" size="lg" disabled={busy || empty} onClick={onExport}>
         <Download className="size-5" />
         {exporting ? 'Exporting…' : 'Export WAV'}
       </Button>
@@ -185,29 +106,40 @@ export function TalkPanel({
   onTalk: () => void
 }) {
   const empty = !text.trim()
+  const [editing, setEditing] = useState(false)
+  const [selectedStart, setSelectedStart] = useState<number | null>(null)
   const editorRef = useRef<HTMLDivElement>(null)
-  const caretRef = useRef<number | null>(null)
+  const defaults = useMemo(
+    () => ({ language, pitch, rate: speed }),
+    [language, pitch, speed],
+  )
+  const pieces = useMemo(() => annotateWords(text, defaults), [text, defaults])
+  const selected = pieces.find(
+    (p): p is { kind: 'word'; word: WordVoice } =>
+      p.kind === 'word' && p.word.start === selectedStart,
+  )?.word
 
   useLayoutEffect(() => {
-    if (speaking) return
+    if (!editing) return
     const el = editorRef.current
     if (!el) return
     if (el.innerText === text) return
     el.innerText = text
-    if (caretRef.current != null) {
-      placeCaret(el, caretRef.current)
-      caretRef.current = null
-    }
-  }, [text, speaking])
+  }, [text, editing])
 
-  function insertCommand(token: string) {
-    const el = editorRef.current
-    const { start, end } = el ? caretOffsets(el, text.length) : { start: text.length, end: text.length }
-    const { next, caret } = insertToken(text, token, start, end)
-    caretRef.current = caret
-    onText(next)
-    requestAnimationFrame(() => editorRef.current?.focus())
+  useLayoutEffect(() => {
+    if (speaking) setEditing(false)
+  }, [speaking])
+
+  function applyToSelected(patch: Partial<{ language: Language; pitch: number; rate: number }>) {
+    if (selectedStart == null) return
+    const inherited = inheritedBeforeWord(text, selectedStart, defaults)
+    const result = setWordVoice(text, selectedStart, patch, inherited)
+    setSelectedStart(result.wordStart)
+    onText(result.next)
   }
+
+  const showEditor = editing || empty
 
   return (
     <div className="flex flex-col gap-3">
@@ -217,12 +149,16 @@ export function TalkPanel({
       >
         What to say
       </p>
-      <div className="relative">
-        {speaking ? (
-          <div key="speaking" className={editorClass}>
-            <WordHighlight text={text} start={highlight?.start ?? null} end={highlight?.end ?? null} />
-          </div>
-        ) : (
+      <div
+        className="relative"
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault()
+            onTalk()
+          }
+        }}
+      >
+        {showEditor && !speaking ? (
           <div
             key="editing"
             id="talk-text"
@@ -243,15 +179,53 @@ export function TalkPanel({
               const clip = e.clipboardData.getData('text/plain')
               document.execCommand('insertText', false, clip)
             }}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                e.preventDefault()
-                onTalk()
-              }
+            onBlur={() => {
+              if (text.trim()) setEditing(false)
             }}
           />
+        ) : (
+          <div
+            id="talk-text"
+            role="group"
+            aria-labelledby="talk-text-label"
+            className={editorClass}
+            onDoubleClick={() => {
+              if (!speaking) setEditing(true)
+            }}
+          >
+            {pieces.map((piece, i) => {
+              if (piece.kind === 'text') {
+                return <span key={`s-${i}`}>{piece.text}</span>
+              }
+              const word = piece.word
+              const marked = word.hasLanguage || word.hasPitch || word.hasRate
+              const spoken =
+                highlight != null &&
+                highlight.start < word.end &&
+                highlight.end > word.start
+              const on = selectedStart === word.start
+              return (
+                <button
+                  key={word.start}
+                  type="button"
+                  title={wordSummary(word)}
+                  disabled={speaking}
+                  onClick={() => setSelectedStart(word.start)}
+                  style={marked ? wordFill(word.pitch, word.rate, word.language) : undefined}
+                  className={cn(
+                    'cursor-pointer rounded-[3px] px-0.5 text-left text-inherit',
+                    spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
+                    on && 'ring-1 ring-white',
+                    !marked && !spoken && 'hover:bg-neutral-800',
+                  )}
+                >
+                  {word.text}
+                </button>
+              )
+            })}
+          </div>
         )}
-        {!speaking && empty ? (
+        {showEditor && empty ? (
           <p className="pointer-events-none absolute top-1 left-0 text-2xl leading-snug font-medium tracking-tight text-neutral-600 sm:text-3xl">
             Type anything. Talk It! will speak it in the selected voice.
           </p>
@@ -263,10 +237,13 @@ export function TalkPanel({
         </p>
       ) : null}
       <CommandButtons
-        language={language}
-        pitch={pitch}
-        rate={speed}
-        onInsert={insertCommand}
+        language={selected?.language ?? language}
+        pitch={selected?.pitch ?? pitch}
+        rate={selected?.rate ?? speed}
+        selectedLabel={selected?.text ?? null}
+        onLanguage={(l) => applyToSelected({ language: l })}
+        onPitch={(n) => applyToSelected({ pitch: n })}
+        onRate={(n) => applyToSelected({ rate: n })}
       />
 
       <div className="flex flex-wrap gap-2 pt-1">
@@ -275,7 +252,10 @@ export function TalkPanel({
             key={ex.label}
             type="button"
             className="rounded-sm border border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-400 hover:border-white hover:text-white"
-            onClick={() => onText(ex.text)}
+            onClick={() => {
+              setSelectedStart(null)
+              onText(ex.text)
+            }}
             title={ex.hint}
           >
             {ex.label}

@@ -94,7 +94,7 @@ function voicePrefix(settings: TalkSettings): string {
   ].join(' ')
 }
 
-const COMMAND_RE =
+export const COMMAND_RE =
   /\{\{\s*(spanish|english|pitch\s+-?\d+|rate\s+-?\d+|speed\s+-?\d+)\s*\}\}/gi
 
 type Embedded =

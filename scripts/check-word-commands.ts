@@ -1,0 +1,30 @@
+import {
+  annotateWords,
+  inheritedBeforeWord,
+  setWordVoice,
+  wordsFromPieces,
+} from '../src/engine/wordCommands.ts'
+
+const defaults = { language: 'english' as const, pitch: 100, rate: 150 }
+const text = "I'll {{pitch 220}}take you to the candy shop."
+const pieces = annotateWords(text, defaults)
+const words = wordsFromPieces(pieces)
+const take = words.find((w) => w.text === 'take')
+if (!take?.hasPitch || take.pitch !== 220) throw new Error(`take: ${JSON.stringify(take)}`)
+const ill = words.find((w) => w.text === "I'll")
+if (!ill || ill.hasPitch || ill.pitch !== 100) throw new Error(`I'll: ${JSON.stringify(ill)}`)
+
+const inherited = inheritedBeforeWord(text, take.start, defaults)
+if (inherited.pitch !== 100) throw new Error(`inherited pitch ${inherited.pitch}`)
+
+const next = setWordVoice(text, ill.start, { pitch: 80 }, inheritedBeforeWord(text, ill.start, defaults))
+if (!next.next.includes('{{pitch 80}}')) throw new Error(next.next)
+const cleared = setWordVoice(
+  next.next,
+  next.wordStart,
+  { pitch: 100 },
+  inheritedBeforeWord(next.next, next.wordStart, defaults),
+)
+if (/\{\{pitch 80\}\}/.test(cleared.next)) throw new Error(`still tagged: ${cleared.next}`)
+
+console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next }))
