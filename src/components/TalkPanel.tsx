@@ -286,7 +286,8 @@ export function TalkPanel({
   onResume,
   pads,
   activePad,
-  onSelectPad,
+  onPadDown,
+  onPadUp,
   onClearPad,
   midi,
 }: {
@@ -311,7 +312,8 @@ export function TalkPanel({
   onResume: () => void
   pads: PhrasePad[]
   activePad: number
-  onSelectPad: (index: number, play?: boolean) => void
+  onPadDown: (index: number) => void
+  onPadUp: (index: number) => void
   onClearPad: (index: number) => void
   midi?: ReactNode
 }) {
@@ -523,11 +525,12 @@ export function TalkPanel({
         pads={pads}
         active={activePad}
         midi={midi}
-        onSelect={(index, play) => {
+        onPadDown={(index) => {
           setSelectedStart(null)
           setEditing(false)
-          onSelectPad(index, play)
+          onPadDown(index)
         }}
+        onPadUp={onPadUp}
         onClear={(index) => {
           setSelectedStart(null)
           setEditing(false)

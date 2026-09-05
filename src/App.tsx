@@ -117,9 +117,10 @@ export default function App() {
   const [volume, setVolume] = useState(boot.volume)
 
   const audio = useAudioOutputs()
-  const { state, error, speak, stop, pause, resume, retune, exportWav, unlock, highlight, analyser, setLoop: setEngineLoop } =
+  const { state, error, speak, stop, pause, resume, retune, exportWav, unlock, highlight, analyser, setLoop: setEngineLoop, releaseHold } =
     useTalkEngine(audio.sinkId, volume / 100)
   const midiNote = useRef<number | null>(null)
+  const heldPadRef = useRef<number | null>(null)
 
   const voice: PadVoice = {
     personalityId: personality.id,
@@ -248,7 +249,7 @@ export default function App() {
     })
   }
 
-  function selectPad(index: number, play?: boolean) {
+  function padDown(index: number) {
     const pad = pads[index]
     if (!pad) return
     const nextVoice = pad.personalityId
@@ -257,9 +258,18 @@ export default function App() {
     setActivePad(index)
     setText(pad.text)
     applyVoice(nextVoice)
-    if (play && pad.text.trim()) {
-      void speak(pad.text, talkSettingsFromVoice(nextVoice))
+    heldPadRef.current = index
+    void unlock()
+    if (pad.text.trim()) {
+      // Hold forces loop for the gesture; releaseHold restores the pad loop flag.
+      void speak(pad.text, talkSettingsFromVoice(nextVoice), { loop: true })
     }
+  }
+
+  function padUp(index: number) {
+    if (heldPadRef.current !== index) return
+    heldPadRef.current = null
+    releaseHold()
   }
 
   return (
@@ -292,7 +302,8 @@ export default function App() {
             onResume={() => void resume()}
             pads={pads}
             activePad={activePad}
-            onSelectPad={selectPad}
+            onPadDown={padDown}
+            onPadUp={padUp}
             onClearPad={(index) => {
               setPads((prev) => {
                 const next = [...prev]
@@ -310,7 +321,7 @@ export default function App() {
                   const padIndex = padIndexFromMidiNote(event.note)
                   midiNote.current = event.note
                   if (padIndex != null) {
-                    selectPad(padIndex, true)
+                    padDown(padIndex)
                     return
                   }
                   const nextPitch = Math.round(event.pitch)
@@ -323,10 +334,14 @@ export default function App() {
                   })
                 }}
                 onNoteOff={(event) => {
-                  if (midiNote.current === event.note) {
-                    midiNote.current = null
-                    stop()
+                  if (midiNote.current !== event.note) return
+                  midiNote.current = null
+                  const padIndex = padIndexFromMidiNote(event.note)
+                  if (padIndex != null) {
+                    padUp(padIndex)
+                    return
                   }
+                  stop()
                 }}
               />
             }

@@ -14,6 +14,8 @@ async function loadSynth() {
   return import('../engine/synth')
 }
 
+const CACHE_LIMIT = 24
+
 function settingsKey(settings: TalkSettings) {
   return [
     settings.personality.id,
@@ -59,6 +61,9 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     offset: number
     words: SpokenWord[]
   } | null>(null)
+  const cacheRef = useRef(
+    new Map<string, { ctx: AudioContext; buffer: AudioBuffer; words: SpokenWord[] }>(),
+  )
   const [state, setState] = useState<PlayState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [highlight, setHighlight] = useState<{ start: number; end: number } | null>(null)
@@ -247,6 +252,20 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     [effectiveLoop, stopHighlight, syncHighlight, tickHighlight],
   )
 
+  const rememberUtterance = useCallback(
+    (key: string, ctx: AudioContext, buffer: AudioBuffer, words: SpokenWord[]) => {
+      const cache = cacheRef.current
+      cache.delete(key)
+      cache.set(key, { ctx, buffer, words })
+      while (cache.size > CACHE_LIMIT) {
+        const oldest = cache.keys().next().value
+        if (oldest == null) break
+        cache.delete(oldest)
+      }
+    },
+    [],
+  )
+
   const applyRetune = useCallback(async () => {
     const settings = latestSettingsRef.current
     const text = textRef.current
@@ -298,6 +317,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       if (playId !== playIdRef.current) return
       const buffer = ctx.createBuffer(1, utterance.samples.length, utterance.sampleRate)
       buffer.getChannelData(0).set(utterance.samples)
+      rememberUtterance(`${settingsKey(snap)}\n${text}`, ctx, buffer, utterance.words)
       armSource(ctx, buffer, offset, utterance.words)
       appliedKeyRef.current = settingsKey(snap)
       if (!pausedRef.current) setState('speaking')
@@ -318,7 +338,11 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         }, 60)
       }
     }
-  }, [armSource, ensureContext, readElapsed])
+  }, [armSource, ensureContext, readElapsed, rememberUtterance])
+
+  useEffect(() => {
+    void loadSynth()
+  }, [])
 
   const speak = useCallback(
     async (text: string, settings: TalkSettings, opts?: { loop?: boolean }) => {
@@ -335,9 +359,30 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       textRef.current = text
       appliedKeyRef.current = settingsKey(settings)
       setError(null)
-      setState('rendering')
+
+      const key = `${settingsKey(settings)}\n${text}`
+      const cached = cacheRef.current.get(key)
+
       try {
-        const { renderUtterance } = await loadSynth()
+        // Resume audio in parallel so cached pads can start immediately.
+        const ctxPromise = ensureContext()
+        if (cached) {
+          const ctx = await ctxPromise
+          if (playId !== playIdRef.current) return
+          if (cached.ctx === ctx) {
+            pausedRef.current = false
+            armSource(ctx, cached.buffer, 0, cached.words)
+            rememberUtterance(key, ctx, cached.buffer, cached.words)
+            appliedKeyRef.current = settingsKey(settings)
+            setState('speaking')
+            return
+          }
+          cacheRef.current.delete(key)
+        }
+
+        setState('rendering')
+        const [{ renderUtterance }, ctx] = await Promise.all([loadSynth(), ctxPromise])
+        if (playId !== playIdRef.current) return
         const used = latestSettingsRef.current ?? settings
         const utterance = renderUtterance(text, used)
         if (playId !== playIdRef.current) return
@@ -347,10 +392,9 @@ export function useTalkEngine(sinkId = '', volume = 1) {
           sessionLoopRef.current = null
           return
         }
-        const ctx = await ensureContext()
-        if (playId !== playIdRef.current) return
         const buffer = ctx.createBuffer(1, utterance.samples.length, utterance.sampleRate)
         buffer.getChannelData(0).set(utterance.samples)
+        rememberUtterance(`${settingsKey(used)}\n${text}`, ctx, buffer, utterance.words)
         pausedRef.current = false
         armSource(ctx, buffer, 0, utterance.words)
         appliedKeyRef.current = settingsKey(used)
@@ -368,8 +412,13 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         sessionLoopRef.current = null
       }
     },
-    [applyRetune, armSource, ensureContext, stop],
+    [applyRetune, armSource, ensureContext, rememberUtterance, stop],
   )
+
+  const releaseHold = useCallback(() => {
+    sessionLoopRef.current = null
+    if (sourceRef.current) sourceRef.current.loop = effectiveLoop()
+  }, [effectiveLoop])
 
   const retune = useCallback(
     (settings: TalkSettings, nextText?: string) => {
@@ -489,6 +538,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     highlight,
     analyser,
     setLoop,
+    releaseHold,
     setError,
   }
 }
