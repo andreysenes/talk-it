@@ -210,7 +210,9 @@ export function TalkPanel({
                   type="button"
                   title={wordSummary(word)}
                   disabled={speaking}
-                  onClick={() => setSelectedStart(word.start)}
+                  onClick={() =>
+                    setSelectedStart((current) => (current === word.start ? null : word.start))
+                  }
                   style={marked ? wordFill(word.pitch, word.rate, word.language) : undefined}
                   className={cn(
                     'cursor-pointer rounded-[3px] px-0.5 text-left text-inherit',
