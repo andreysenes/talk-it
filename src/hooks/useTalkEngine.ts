@@ -1,0 +1,111 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { TalkSettings } from '../engine/personalities'
+
+type PlayState = 'idle' | 'rendering' | 'speaking' | 'exporting' | 'error'
+
+async function loadSynth() {
+  return import('../engine/synth')
+}
+
+export function useTalkEngine() {
+  const ctxRef = useRef<AudioContext | null>(null)
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const [state, setState] = useState<PlayState>('idle')
+  const [error, setError] = useState<string | null>(null)
+
+  const stop = useCallback(() => {
+    try {
+      sourceRef.current?.stop()
+    } catch {
+      /* already stopped */
+    }
+    sourceRef.current = null
+    setState('idle')
+  }, [])
+
+  useEffect(() => () => stop(), [stop])
+
+  const ensureContext = useCallback(async () => {
+    if (!ctxRef.current) {
+      ctxRef.current = new AudioContext()
+    }
+    if (ctxRef.current.state === 'suspended') {
+      await ctxRef.current.resume()
+    }
+    return ctxRef.current
+  }, [])
+
+  const speak = useCallback(
+    async (text: string, settings: TalkSettings) => {
+      const trimmed = text.trim()
+      if (!trimmed) {
+        setError('Type something first.')
+        setState('error')
+        return
+      }
+      stop()
+      setError(null)
+      setState('rendering')
+      try {
+        const { renderUtterance } = await loadSynth()
+        const utterance = renderUtterance(trimmed, settings)
+        if (!utterance.samples.length) {
+          setError('Nothing to say — try different words.')
+          setState('error')
+          return
+        }
+        const ctx = await ensureContext()
+        const buffer = ctx.createBuffer(1, utterance.samples.length, utterance.sampleRate)
+        buffer.getChannelData(0).set(utterance.samples)
+        const source = ctx.createBufferSource()
+        source.buffer = buffer
+        source.connect(ctx.destination)
+        source.onended = () => {
+          if (sourceRef.current === source) {
+            sourceRef.current = null
+            setState('idle')
+          }
+        }
+        sourceRef.current = source
+        setState('speaking')
+        source.start()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not speak.')
+        setState('error')
+      }
+    },
+    [ensureContext, stop],
+  )
+
+  const exportWav = useCallback(async (text: string, settings: TalkSettings) => {
+    const trimmed = text.trim()
+    if (!trimmed) {
+      setError('Type something first.')
+      setState('error')
+      return
+    }
+    setError(null)
+    setState('exporting')
+    try {
+      const { renderUtterance, utteranceToWav, wavToBlob, suggestFileName } =
+        await loadSynth()
+      const utterance = renderUtterance(trimmed, settings)
+      const bytes = utteranceToWav(utterance)
+      const blob = wavToBlob(bytes)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = suggestFileName(trimmed)
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      setState('idle')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed.')
+      setState('error')
+    }
+  }, [])
+
+  return { state, error, speak, stop, exportWav, setError }
+}
