@@ -116,7 +116,7 @@ export default function App() {
   const [volume, setVolume] = useState(boot.volume)
 
   const audio = useAudioOutputs()
-  const { state, error, speak, stop, pause, resume, exportWav, unlock, highlight } =
+  const { state, error, speak, stop, pause, resume, exportWav, unlock, highlight, analyser } =
     useTalkEngine(audio.sinkId, volume / 100)
   const midiNote = useRef<number | null>(null)
 
@@ -281,8 +281,10 @@ export default function App() {
             rendering={state === 'rendering'}
             exporting={state === 'exporting'}
             empty={!text.trim()}
-            onTalk={() => {
-              if (state === 'paused') void resume()
+            analyser={analyser}
+            onPlay={() => {
+              if (state === 'speaking') void pause()
+              else if (state === 'paused') void resume()
               else void speak(text, settings)
             }}
             onStop={stop}

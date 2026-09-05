@@ -1,4 +1,4 @@
-import { Download, Square, Volume2 } from 'lucide-react'
+import { Download, Pause, Play, Square } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
 import { PadBank } from './PadBank'
@@ -152,48 +152,70 @@ export function TalkActions({
   rendering,
   exporting,
   empty,
-  onTalk,
+  onPlay,
   onStop,
   onExport,
   midi,
   volume,
   onVolume,
+  analyser,
 }: {
   speaking: boolean
   paused: boolean
   rendering: boolean
   exporting: boolean
   empty: boolean
-  onTalk: () => void
+  onPlay: () => void
   onStop: () => void
   onExport: () => void
   midi: ReactNode
   volume: number
   onVolume: (n: number) => void
+  analyser: AnalyserNode | null
 }) {
-  const busy = speaking || rendering || exporting
+  const busy = rendering || exporting
+  const playDisabled = busy || (empty && !speaking && !paused)
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button type="button" variant="talk" size="lg" disabled={busy || empty} onClick={onTalk}>
-        <Volume2 className="size-5" />
-        {rendering ? 'Building voice…' : paused ? 'Paused' : speaking ? 'Talking…' : 'Talk It!'}
+      <Button
+        type="button"
+        variant="talk"
+        size="lg"
+        disabled={playDisabled}
+        onClick={onPlay}
+        aria-label={speaking ? 'Pause' : 'Play'}
+      >
+        {speaking ? <Pause className="size-4 fill-current" /> : <Play className="size-4 fill-current" />}
+        {rendering ? 'Building…' : speaking ? 'Pause' : 'Play'}
       </Button>
       <Button
         type="button"
         variant="stop"
-        size="lg"
+        size="iconLg"
         disabled={!speaking && !paused}
         onClick={onStop}
+        aria-label="Stop"
       >
-        <Square className="size-4 fill-current" />
-        Stop
+        <Square className="size-3.5 fill-current" />
       </Button>
-      <Button type="button" variant="export" size="lg" disabled={busy || empty} onClick={onExport}>
-        <Download className="size-5" />
-        {exporting ? 'Exporting…' : 'Export WAV'}
+      <Button
+        type="button"
+        variant="export"
+        size="iconLg"
+        disabled={busy || empty || speaking || paused}
+        onClick={onExport}
+        aria-label={exporting ? 'Exporting WAV' : 'Export WAV'}
+      >
+        <Download className="size-4" />
       </Button>
       {midi}
-      <VolumeControl value={volume} onChange={onVolume} />
+      <VolumeControl
+        value={volume}
+        onChange={onVolume}
+        analyser={analyser}
+        playing={speaking}
+        paused={paused}
+      />
     </div>
   )
 }

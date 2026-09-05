@@ -17,6 +17,7 @@ async function loadSynth() {
 export function useTalkEngine(sinkId = '', volume = 1) {
   const ctxRef = useRef<AudioContext | null>(null)
   const gainRef = useRef<GainNode | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
   const sourceRef = useRef<AudioBufferSourceNode | null>(null)
   const rafRef = useRef<number>(0)
   const startedAtRef = useRef(0)
@@ -27,6 +28,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   const [state, setState] = useState<PlayState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [highlight, setHighlight] = useState<{ start: number; end: number } | null>(null)
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null)
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
@@ -61,9 +63,17 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         /* stay on default output */
       }
     }
+    if (!analyserRef.current) {
+      const node = ctxRef.current.createAnalyser()
+      node.fftSize = 256
+      node.smoothingTimeConstant = 0.35
+      analyserRef.current = node
+      setAnalyser(node)
+    }
     if (!gainRef.current) {
       const gain = ctxRef.current.createGain()
       gain.gain.value = volumeRef.current
+      analyserRef.current.connect(gain)
       gain.connect(ctxRef.current.destination)
       gainRef.current = gain
     }
@@ -90,13 +100,13 @@ export function useTalkEngine(sinkId = '', volume = 1) {
           return
         }
         const ctx = await ensureContext()
-        const gain = gainRef.current
-        if (!gain) throw new Error('Audio output is not ready.')
+        const tap = analyserRef.current
+        if (!tap || !gainRef.current) throw new Error('Audio output is not ready.')
         const buffer = ctx.createBuffer(1, utterance.samples.length, utterance.sampleRate)
         buffer.getChannelData(0).set(utterance.samples)
         const source = ctx.createBufferSource()
         source.buffer = buffer
-        source.connect(gain)
+        source.connect(tap)
         source.onended = () => {
           if (sourceRef.current === source) {
             sourceRef.current = null
@@ -201,5 +211,5 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     await ensureContext()
   }, [ensureContext])
 
-  return { state, error, speak, stop, pause, resume, exportWav, unlock, highlight, setError }
+  return { state, error, speak, stop, pause, resume, exportWav, unlock, highlight, analyser, setError }
 }
