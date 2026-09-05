@@ -7,7 +7,7 @@ async function loadSynth() {
   return import('../engine/synth')
 }
 
-export function useTalkEngine() {
+export function useTalkEngine(sinkId = '') {
   const ctxRef = useRef<AudioContext | null>(null)
   const sourceRef = useRef<AudioBufferSourceNode | null>(null)
   const [state, setState] = useState<PlayState>('idle')
@@ -32,8 +32,15 @@ export function useTalkEngine() {
     if (ctxRef.current.state === 'suspended') {
       await ctxRef.current.resume()
     }
+    if (ctxRef.current.setSinkId) {
+      try {
+        await ctxRef.current.setSinkId(sinkId || '')
+      } catch {
+        /* stay on default output */
+      }
+    }
     return ctxRef.current
-  }, [])
+  }, [sinkId])
 
   const speak = useCallback(
     async (text: string, settings: TalkSettings) => {
@@ -107,5 +114,17 @@ export function useTalkEngine() {
     }
   }, [])
 
-  return { state, error, speak, stop, exportWav, setError }
+  useEffect(() => {
+    const ctx = ctxRef.current
+    if (!ctx?.setSinkId) return
+    void ctx.setSinkId(sinkId || '').catch(() => {
+      /* stay on current output */
+    })
+  }, [sinkId])
+
+  const unlock = useCallback(async () => {
+    await ensureContext()
+  }, [ensureContext])
+
+  return { state, error, speak, stop, exportWav, unlock, setError }
 }

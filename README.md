@@ -86,6 +86,35 @@ SoftVoice allowed commands in `{{braces}}`. Supported here:
 
 WAV export writes the synthesizer buffer directly (no loopback recorder like the Windows WASAPI capture).
 
+## MIDI in / audio back to a DAW
+
+The header **MIDI** badge (next to Voice) turns this page into a MIDI instrument the DAW can play.
+
+A browser cannot register itself as a Core Audio / ASIO device. MIDI arrives through **Web MIDI**; audio returns through a **virtual output** the DAW already knows (BlackHole, Loopback, VB-Audio, etc.).
+
+Use **Chrome or Edge**. Safari and Firefox do not expose Web MIDI in a useful way.
+
+### Mac (Logic, Ableton, Reaper, …)
+
+1. Open **Audio MIDI Setup → Window → Show MIDI Studio**. Double-click **IAC Driver** and enable **Device is online**. Add two ports if you want MIDI in and MIDI out without a loop (`Talk It In`, `Talk It Out`).
+2. Install [BlackHole](https://existential.audio/blackhole/) or Loopback. In the DAW, create an audio track whose input is that device.
+3. In Talk It!, open the MIDI badge → **Connect MIDI**. Set **MIDI in** to the IAC port the DAW sends on. Set **Audio to DAW** to BlackHole / Loopback.
+4. In the DAW, put a MIDI track whose output is that IAC port. Put the current phrase in the Talk It! text box. Play notes.
+
+### What MIDI does
+
+| Message | Talk It! |
+|---|---|
+| Note number | Pitch. A2 (note 45) = Talk It pitch 100 (~110 Hz). |
+| Velocity | Rate. 64 ≈ 150 (the stock talking speed). |
+| CC1 (mod wheel) | Overrides rate until the next change. |
+| Note on | Speaks the current text at that pitch/rate. |
+| Note off | Stops if it is the note that started speech. |
+
+**MIDI out** is optional. Enable **Echo notes to MIDI out** only if the DAW should see the same notes back — and use a *different* IAC bus than MIDI in, or the page and the DAW will feed each other.
+
+Click **Connect MIDI** once so the browser can resume audio; MIDI messages alone are not a user gesture.
+
 ## Credits
 
 - Original Talk It! frontend recreation: [glebasos/OpenTalkIt](https://github.com/glebasos/OpenTalkIt) and [zack_fire on itch.io](https://zack-fire.itch.io/opentalkit)
