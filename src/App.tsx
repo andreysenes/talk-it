@@ -286,7 +286,7 @@ export default function App() {
               if (state === 'paused') void resume()
               else void speak(text, settings)
             }}
-            onSpeakWord={(snippet) => void speak(snippet, settings)}
+            onSpeakWord={(snippet) => void speak(snippet, settings, { loop: false })}
             onPause={() => void pause()}
             onResume={() => void resume()}
             pads={pads}

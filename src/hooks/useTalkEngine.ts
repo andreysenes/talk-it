@@ -46,6 +46,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   volumeRef.current = volume
   const durationMsRef = useRef(0)
   const loopRef = useRef(false)
+  // When set, locks loop for the current utterance (word previews force false).
+  const sessionLoopRef = useRef<boolean | null>(null)
   const pausedRef = useRef(false)
   const playIdRef = useRef(0)
   const retuneBusyRef = useRef(false)
@@ -67,6 +69,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     rafRef.current = 0
   }, [])
 
+  const effectiveLoop = useCallback(() => sessionLoopRef.current ?? loopRef.current, [])
+
   const readElapsed = useCallback(() => {
     let elapsed: number
     if (pausedRef.current) elapsed = elapsedMsRef.current
@@ -76,9 +80,9 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       else elapsed = Math.max(0, (ctx.currentTime - startedAtRef.current) * 1000)
     }
     const dur = durationMsRef.current
-    if (loopRef.current && dur > 0) return elapsed % dur
+    if (effectiveLoop() && dur > 0) return elapsed % dur
     return elapsed
-  }, [])
+  }, [effectiveLoop])
 
   const syncHighlight = useCallback((elapsed: number, words: SpokenWord[]) => {
     let word: SpokenWord | null = null
@@ -109,6 +113,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     stopHighlight()
     pausedRef.current = false
     pendingRef.current = null
+    sessionLoopRef.current = null
     retuneDirtyRef.current = false
     window.clearTimeout(retuneTimerRef.current)
     retuneTimerRef.current = 0
@@ -199,7 +204,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
 
       const source = ctx.createBufferSource()
       source.buffer = buffer
-      source.loop = loopRef.current
+      source.loop = effectiveLoop()
       durationMsRef.current = buffer.duration * 1000
       const fade = ctx.createGain()
       source.connect(fade)
@@ -208,6 +213,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         if (sourceRef.current !== source) return
         sourceRef.current = null
         fadeGainRef.current = null
+        sessionLoopRef.current = null
         stopHighlight()
         wordsRef.current = []
         elapsedMsRef.current = 0
@@ -238,7 +244,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       tickHighlight(source)
       return source
     },
-    [stopHighlight, syncHighlight, tickHighlight],
+    [effectiveLoop, stopHighlight, syncHighlight, tickHighlight],
   )
 
   const applyRetune = useCallback(async () => {
@@ -315,7 +321,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   }, [armSource, ensureContext, readElapsed])
 
   const speak = useCallback(
-    async (text: string, settings: TalkSettings) => {
+    async (text: string, settings: TalkSettings, opts?: { loop?: boolean }) => {
       const trimmed = text.trim()
       if (!trimmed) {
         setError('Type something first.')
@@ -323,6 +329,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         return
       }
       stop()
+      sessionLoopRef.current = opts?.loop ?? null
       const playId = playIdRef.current
       latestSettingsRef.current = settings
       textRef.current = text
@@ -337,6 +344,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         if (!utterance.samples.length) {
           setError('Nothing to say — try different words.')
           setState('error')
+          sessionLoopRef.current = null
           return
         }
         const ctx = await ensureContext()
@@ -357,6 +365,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         if (playId !== playIdRef.current) return
         setError(err instanceof Error ? err.message : 'Could not speak.')
         setState('error')
+        sessionLoopRef.current = null
       }
     },
     [applyRetune, armSource, ensureContext, stop],
@@ -455,10 +464,13 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     await ensureContext()
   }, [ensureContext])
 
-  const setLoop = useCallback((on: boolean) => {
-    loopRef.current = on
-    if (sourceRef.current) sourceRef.current.loop = on
-  }, [])
+  const setLoop = useCallback(
+    (on: boolean) => {
+      loopRef.current = on
+      if (sourceRef.current) sourceRef.current.loop = effectiveLoop()
+    },
+    [effectiveLoop],
+  )
 
   return {
     state,

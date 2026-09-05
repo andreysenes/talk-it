@@ -72,42 +72,55 @@ function WordEditor({
     setValue(text)
   }, [text])
 
+  // Ghost span sizes the field to the glyphs — HTML size= leaves spare room.
   return (
-    <input
-      value={value}
-      aria-label="Word"
-      size={Math.max(1, value.length)}
-      style={style}
-      className={cn(
-        wordClass,
-        'inline w-auto min-w-[1ch] bg-transparent outline-none shadow-[inset_0_0_0_1px_#fff]',
-        className,
-      )}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => {
-        if (skipBlur.current) {
-          skipBlur.current = false
-          return
-        }
-        const next = value.replace(/\s+/g, ' ').trim()
-        if (next === text) return
-        onCommit(next)
-      }}
-      onKeyDown={(event) => {
-        event.stopPropagation()
-        if (event.key === 'Enter') {
-          event.preventDefault()
-          event.currentTarget.blur()
-        }
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          skipBlur.current = true
-          setValue(text)
-          onDeselect()
-        }
-      }}
-      onPointerDown={(event) => event.stopPropagation()}
-    />
+    <span className="relative inline-grid max-w-full align-baseline">
+      <span
+        aria-hidden
+        style={style}
+        className={cn(
+          wordClass,
+          'invisible col-start-1 row-start-1 whitespace-pre',
+          className,
+        )}
+      >
+        {value || ' '}
+      </span>
+      <input
+        value={value}
+        aria-label="Word"
+        style={style}
+        className={cn(
+          wordClass,
+          'col-start-1 row-start-1 w-full min-w-0 bg-transparent outline-none shadow-[inset_0_0_0_1px_#fff]',
+          className,
+        )}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => {
+          if (skipBlur.current) {
+            skipBlur.current = false
+            return
+          }
+          const next = value.replace(/\s+/g, ' ').trim()
+          if (next === text) return
+          onCommit(next)
+        }}
+        onKeyDown={(event) => {
+          event.stopPropagation()
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            event.currentTarget.blur()
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            skipBlur.current = true
+            setValue(text)
+            onDeselect()
+          }
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+      />
+    </span>
   )
 }
 
