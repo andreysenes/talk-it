@@ -30,7 +30,7 @@ const EXAMPLES = [
 ]
 
 const editorClass =
-  'min-h-[10rem] w-full rounded-sm border border-neutral-800 bg-black px-1 py-2 font-sans text-2xl leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:min-h-[12rem] sm:text-3xl sm:leading-snug'
+  'w-full min-h-[1.25em] px-0 py-1 font-sans text-2xl leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:text-3xl'
 
 function WordHighlight({
   text,
@@ -172,7 +172,7 @@ export function TalkPanel({
       </p>
       <div className="relative">
         {speaking ? (
-          <div key="speaking" className={cn(editorClass, error && 'border-white')}>
+          <div key="speaking" className={editorClass}>
             <WordHighlight text={text} start={highlight?.start ?? null} end={highlight?.end ?? null} />
           </div>
         ) : (
@@ -186,7 +186,7 @@ export function TalkPanel({
             contentEditable
             suppressContentEditableWarning
             tabIndex={0}
-            className={cn(editorClass, 'cursor-text caret-white focus:border-white', error && 'border-white')}
+            className={cn(editorClass, 'cursor-text caret-white')}
             onInput={(e) => {
               if (!e.currentTarget.isContentEditable) return
               onText(e.currentTarget.innerText)
@@ -205,7 +205,7 @@ export function TalkPanel({
           />
         )}
         {!speaking && empty ? (
-          <p className="pointer-events-none absolute top-2 left-1 text-2xl leading-snug font-medium tracking-tight text-neutral-600 sm:text-3xl">
+          <p className="pointer-events-none absolute top-1 left-0 text-2xl leading-snug font-medium tracking-tight text-neutral-600 sm:text-3xl">
             Type anything. Talk It! will speak it in the selected voice.
           </p>
         ) : null}
