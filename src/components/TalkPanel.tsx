@@ -182,13 +182,12 @@ export function TalkActions({
       <Button
         type="button"
         variant="talk"
-        size="lg"
+        size="iconLg"
         disabled={playDisabled}
         onClick={onPlay}
-        aria-label={speaking ? 'Pause' : 'Play'}
+        aria-label={rendering ? 'Building voice' : speaking ? 'Pause' : 'Play'}
       >
         {speaking ? <Pause className="size-4 fill-current" /> : <Play className="size-4 fill-current" />}
-        {rendering ? 'Building…' : speaking ? 'Pause' : 'Play'}
       </Button>
       <Button
         type="button"
