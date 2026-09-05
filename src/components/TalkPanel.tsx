@@ -101,17 +101,11 @@ function placeCaret(el: HTMLElement, offset: number) {
   sel.addRange(range)
 }
 
-export function TalkPanel({
-  text,
-  onText,
-  pitch,
-  speed,
-  language,
+export function TalkActions({
   speaking,
   rendering,
   exporting,
-  error,
-  highlight,
+  empty,
   onTalk,
   onStop,
   onExport,
@@ -119,16 +113,10 @@ export function TalkPanel({
   volume,
   onVolume,
 }: {
-  text: string
-  onText: (v: string) => void
-  pitch: number
-  speed: number
-  language: Language
   speaking: boolean
   rendering: boolean
   exporting: boolean
-  error: string | null
-  highlight: { start: number; end: number } | null
+  empty: boolean
   onTalk: () => void
   onStop: () => void
   onExport: () => void
@@ -137,6 +125,65 @@ export function TalkPanel({
   onVolume: (n: number) => void
 }) {
   const busy = speaking || rendering || exporting
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        type="button"
+        variant="talk"
+        size="lg"
+        disabled={busy || empty}
+        onClick={onTalk}
+      >
+        <Volume2 className="size-5" />
+        {rendering ? 'Building voice…' : speaking ? 'Talking…' : 'Talk It!'}
+      </Button>
+      <Button
+        type="button"
+        variant="stop"
+        size="lg"
+        disabled={!speaking}
+        onClick={onStop}
+      >
+        <Square className="size-4 fill-current" />
+        Stop
+      </Button>
+      <Button
+        type="button"
+        variant="export"
+        size="lg"
+        disabled={busy || empty}
+        onClick={onExport}
+      >
+        <Download className="size-5" />
+        {exporting ? 'Exporting…' : 'Export WAV'}
+      </Button>
+      {midi}
+      <VolumeControl value={volume} onChange={onVolume} />
+    </div>
+  )
+}
+
+export function TalkPanel({
+  text,
+  onText,
+  pitch,
+  speed,
+  language,
+  speaking,
+  error,
+  highlight,
+  onTalk,
+}: {
+  text: string
+  onText: (v: string) => void
+  pitch: number
+  speed: number
+  language: Language
+  speaking: boolean
+  error: string | null
+  highlight: { start: number; end: number } | null
+  onTalk: () => void
+}) {
   const empty = !text.trim()
   const editorRef = useRef<HTMLDivElement>(null)
   const caretRef = useRef<number | null>(null)
@@ -221,41 +268,6 @@ export function TalkPanel({
         rate={speed}
         onInsert={insertCommand}
       />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="talk"
-          size="lg"
-          disabled={busy || empty}
-          onClick={onTalk}
-        >
-          <Volume2 className="size-5" />
-          {rendering ? 'Building voice…' : speaking ? 'Talking…' : 'Talk It!'}
-        </Button>
-        <Button
-          type="button"
-          variant="stop"
-          size="lg"
-          disabled={!speaking}
-          onClick={onStop}
-        >
-          <Square className="size-4 fill-current" />
-          Stop
-        </Button>
-        <Button
-          type="button"
-          variant="export"
-          size="lg"
-          disabled={busy || empty}
-          onClick={onExport}
-        >
-          <Download className="size-5" />
-          {exporting ? 'Exporting…' : 'Export WAV'}
-        </Button>
-        {midi}
-        <VolumeControl value={volume} onChange={onVolume} />
-      </div>
 
       <div className="flex flex-wrap gap-2 pt-1">
         {EXAMPLES.map((ex) => (

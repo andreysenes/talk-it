@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { MidiBadge } from './components/MidiBadge'
 import { ParameterPanel } from './components/ParameterPanel'
 import { PersonalityGrid } from './components/PersonalityGrid'
-import { TalkPanel } from './components/TalkPanel'
+import { TalkActions, TalkPanel } from './components/TalkPanel'
 import { VoiceSliders } from './components/VoiceSliders'
 import {
   PERSONALITIES,
@@ -114,33 +114,11 @@ export default function App() {
             selectedId={personality.id}
             onSelect={selectPersonality}
           />
-          <VoiceSliders
-            pitch={pitch}
-            speed={speed}
-            onPitch={setPitch}
-            onSpeed={setSpeed}
-          />
-          <ParameterPanel
-            pitchQuality={pitchQuality}
-            vocalEffort={vocalEffort}
-            language={language}
-            vintage={vintage}
-            onPitchQuality={setPitchQuality}
-            onVocalEffort={setVocalEffort}
-            onLanguage={setLanguage}
-            onVintage={setVintage}
-          />
-          <TalkPanel
-            text={text}
-            onText={setText}
-            pitch={pitch}
-            speed={speed}
-            language={language}
+          <TalkActions
             speaking={state === 'speaking'}
             rendering={state === 'rendering'}
             exporting={state === 'exporting'}
-            error={error}
-            highlight={highlight}
+            empty={!text.trim()}
             onTalk={() => void speak(text, settings)}
             onStop={stop}
             onExport={() => void exportWav(text, settings)}
@@ -170,6 +148,33 @@ export default function App() {
                 }}
               />
             }
+          />
+          <VoiceSliders
+            pitch={pitch}
+            speed={speed}
+            onPitch={setPitch}
+            onSpeed={setSpeed}
+          />
+          <ParameterPanel
+            pitchQuality={pitchQuality}
+            vocalEffort={vocalEffort}
+            language={language}
+            vintage={vintage}
+            onPitchQuality={setPitchQuality}
+            onVocalEffort={setVocalEffort}
+            onLanguage={setLanguage}
+            onVintage={setVintage}
+          />
+          <TalkPanel
+            text={text}
+            onText={setText}
+            pitch={pitch}
+            speed={speed}
+            language={language}
+            speaking={state === 'speaking'}
+            error={error}
+            highlight={highlight}
+            onTalk={() => void speak(text, settings)}
           />
         </main>
       </div>

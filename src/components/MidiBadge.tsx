@@ -114,7 +114,7 @@ export function MidiBadge({
       {open && (
         <div
           role="dialog"
-          className="absolute bottom-full left-0 z-20 mb-2 max-h-[min(70vh,36rem)] w-[min(100vw-1.5rem,26rem)] overflow-y-auto border border-neutral-800 bg-[#0c0c0c] p-3"
+          className="absolute top-full left-0 z-20 mt-2 max-h-[min(70vh,36rem)] w-[min(100vw-1.5rem,26rem)] overflow-y-auto border border-neutral-800 bg-[#0c0c0c] p-3"
         >
           <p className="mb-3 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
             DAW · MIDI
