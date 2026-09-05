@@ -124,10 +124,10 @@ Talk It! **will not appear** under Link, Tempo & MIDI → Input Ports / Output P
 
 | Message | Talk It! |
 |---|---|
-| Note number | Pitch. A2 (note 45) = Talk It pitch 100 (~110 Hz). |
-| Velocity | Rate. 64 ≈ 150 (the stock talking speed). |
+| C4–B4 | Pads 1–12. C4 = pad 1, C#4 = pad 2, … B4 = pad 12. Loads that pad’s voice and speaks it. |
+| Other notes | Pitch. A2 (note 45) = Talk It pitch 100 (~110 Hz). |
+| Velocity | Rate, for notes outside the pad range. 64 ≈ 150. |
 | CC1 (mod wheel) | Overrides rate until the next change. |
-| Note on | Speaks the current text at that pitch/rate. |
 | Note off | Stops if it is the note that started speech. |
 
 **MIDI out** is optional. Enable **Echo notes to MIDI out** only if the DAW should see the same notes back — and use a *different* IAC bus than MIDI in, or the page and the DAW will feed each other.

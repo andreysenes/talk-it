@@ -42,3 +42,12 @@ export type MidiNoteEvent = {
   pitch: number
   speed: number
 }
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
+
+export function midiNoteName(note: number): string {
+  const n = Math.round(note)
+  const pc = ((n % 12) + 12) % 12
+  const oct = Math.floor(n / 12) - 1
+  return `${NOTE_NAMES[pc]}${oct}`
+}

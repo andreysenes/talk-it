@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { cn } from '../lib/utils'
-import { PAD_KEYS, padCaption, padIndexFromKey, type PhrasePad } from '../engine/pads'
+import { PAD_KEYS, midiNoteForPad, padCaption, padIndexFromKey, type PhrasePad } from '../engine/pads'
+import { midiNoteName } from '../engine/midi'
 
 export function PadBank({
   pads,
@@ -51,8 +52,8 @@ export function PadBank({
               type="button"
               title={
                 filled
-                  ? `${padCaption(pad, i)} · ${PAD_KEYS[i]} talks · voice is saved on this pad · right-click to clear`
-                  : `Pad ${PAD_KEYS[i]} · press ${PAD_KEYS[i]} to talk after you save a line`
+                  ? `${padCaption(pad, i)} · ${PAD_KEYS[i]} / ${midiNoteName(midiNoteForPad(i))} talks · right-click to clear`
+                  : `Pad ${PAD_KEYS[i]} · MIDI ${midiNoteName(midiNoteForPad(i))} · save a line then trigger it`
               }
               onClick={() => onSelect(i)}
               onContextMenu={(event) => {
@@ -73,6 +74,9 @@ export function PadBank({
                 )}
               >
                 {PAD_KEYS[i]}
+                <span className={cn('ml-1', on ? 'text-neutral-400' : 'text-neutral-700')}>
+                  {midiNoteName(midiNoteForPad(i))}
+                </span>
               </span>
               <span className="mt-0.5 block truncate text-xs font-medium">
                 {padCaption(pad, i)}

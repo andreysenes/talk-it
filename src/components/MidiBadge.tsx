@@ -224,9 +224,9 @@ export function MidiBadge({
               ) : null}
 
               <p className="text-[11px] leading-relaxed text-neutral-500">
-                Note number → pitch (A2 / note 45 = Talk It 100). Velocity → rate (64 ≈
-                150). Mod wheel (CC1) overrides rate. Note on speaks the text; note off
-                stops.
+                Pads: C4–B4 trigger pads 1–12 (C4 = pad 1). Other notes still set pitch
+                (A2 / note 45 = Talk It 100). Velocity and mod wheel (CC1) set rate for
+                those notes. Note off stops.
               </p>
             </div>
           )}

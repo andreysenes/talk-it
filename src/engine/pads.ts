@@ -12,10 +12,23 @@ export const PAD_COUNT = 12
 
 export const PAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='] as const
 
+/** MIDI C4 — pad 1. Chromatic up to B4 for pad 12. */
+export const PAD_MIDI_C4 = 60
+
 export function padIndexFromKey(event: KeyboardEvent): number | null {
   const key = event.key
   const i = PAD_KEYS.indexOf(key as (typeof PAD_KEYS)[number])
   return i >= 0 ? i : null
+}
+
+export function padIndexFromMidiNote(note: number): number | null {
+  const i = note - PAD_MIDI_C4
+  if (i < 0 || i >= PAD_COUNT) return null
+  return i
+}
+
+export function midiNoteForPad(index: number): number {
+  return PAD_MIDI_C4 + index
 }
 
 export type PadVoice = {

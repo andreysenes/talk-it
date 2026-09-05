@@ -15,6 +15,7 @@ import {
   DEFAULT_PADS,
   emptyPad,
   normalizePads,
+  padIndexFromMidiNote,
   padsEqual,
   snapshotPad,
   stockPadVoice,
@@ -294,7 +295,12 @@ export default function App() {
                 onPrimeAudio={() => unlock()}
                 onRateCc={setSpeed}
                 onNoteOn={(event) => {
+                  const padIndex = padIndexFromMidiNote(event.note)
                   midiNote.current = event.note
+                  if (padIndex != null) {
+                    selectPad(padIndex, true)
+                    return
+                  }
                   const nextPitch = Math.round(event.pitch)
                   setPitch(nextPitch)
                   setSpeed(event.speed)
