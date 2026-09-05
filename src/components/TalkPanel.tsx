@@ -190,7 +190,10 @@ export function TalkPanel({
             aria-labelledby="talk-text-label"
             className={editorClass}
             onDoubleClick={() => {
-              if (!speaking) setEditing(true)
+              if (!speaking) {
+                setSelectedStart(null)
+                setEditing(true)
+              }
             }}
           >
             {pieces.map((piece, i) => {
@@ -232,21 +235,25 @@ export function TalkPanel({
             Type anything. Talk It! will speak it in the selected voice.
           </p>
         ) : null}
+        {selected && !showEditor ? (
+          <div className="absolute top-full left-0 z-30 mt-1">
+            <CommandButtons
+              language={selected.language}
+              pitch={selected.pitch}
+              rate={selected.rate}
+              selectedLabel={selected.text}
+              onLanguage={(l) => applyToSelected({ language: l })}
+              onPitch={(n) => applyToSelected({ pitch: n })}
+              onRate={(n) => applyToSelected({ rate: n })}
+            />
+          </div>
+        ) : null}
       </div>
       {error ? (
         <p className="text-sm font-medium text-white" role="alert">
           {error}
         </p>
       ) : null}
-      <CommandButtons
-        language={selected?.language ?? language}
-        pitch={selected?.pitch ?? pitch}
-        rate={selected?.rate ?? speed}
-        selectedLabel={selected?.text ?? null}
-        onLanguage={(l) => applyToSelected({ language: l })}
-        onPitch={(n) => applyToSelected({ pitch: n })}
-        onRate={(n) => applyToSelected({ rate: n })}
-      />
 
       <div className="flex flex-wrap gap-2 pt-1">
         {EXAMPLES.map((ex) => (

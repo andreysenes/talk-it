@@ -34,6 +34,7 @@ body {
 .talk-panel {
   background: #0c0c0c;
   border: 1px solid #222;
+  overflow: visible;
 }
 
 input[type='number']::-webkit-outer-spin-button,

@@ -1,9 +1,12 @@
 import { ChevronDown } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '../lib/utils'
 import type { Language } from '../engine/personalities'
 
 export type CommandKind = 'language' | 'pitch' | 'rate'
+
+const popoverClass =
+  'absolute top-full left-0 z-50 mt-1 min-w-[12rem] rounded-sm border border-neutral-800 bg-[#0c0c0c] p-3 shadow-lg shadow-black/60'
 
 function Chip({
   label,
@@ -40,6 +43,7 @@ function Chip({
           open && 'bg-white text-black',
         )}
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-label={`Configure ${label}`}
       >
         <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
@@ -66,12 +70,35 @@ export function CommandButtons({
   onRate: (n: number) => void
 }) {
   const [open, setOpen] = useState<CommandKind | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
   const armed = selectedLabel != null
 
   useEffect(() => {
     if (armed) setOpen('pitch')
     else setOpen(null)
   }, [armed, selectedLabel])
+
+  useEffect(() => {
+    if (open == null) return
+
+    function onPointerDown(event: PointerEvent) {
+      const root = rootRef.current
+      if (!root) return
+      if (event.target instanceof Node && root.contains(event.target)) return
+      setOpen(null)
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(null)
+    }
+
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
 
   const langToken = language === 'spanish' ? '{{spanish}}' : '{{english}}'
   const pitchToken = `{{pitch ${pitch}}}`
@@ -83,8 +110,11 @@ export function CommandButtons({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
+    <div
+      ref={rootRef}
+      className="relative z-20 flex flex-wrap items-center gap-2 overflow-visible rounded-sm bg-[#0c0c0c] p-1 shadow-lg shadow-black/60"
+    >
+      <div className="relative overflow-visible">
         <Chip
           label="Language"
           token={langToken}
@@ -92,6 +122,42 @@ export function CommandButtons({
           disabled={!armed}
           onToggle={() => toggle('language')}
         />
+        {armed && open === 'language' ? (
+          <div className={popoverClass} role="dialog">
+            <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
+              Language
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={cn(
+                  'rounded-sm px-3 py-1.5 text-xs font-medium',
+                  language === 'english'
+                    ? 'bg-white text-black'
+                    : 'border border-neutral-800 text-neutral-400 hover:text-white',
+                )}
+                onClick={() => onLanguage('english')}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  'rounded-sm px-3 py-1.5 text-xs font-medium',
+                  language === 'spanish'
+                    ? 'bg-white text-black'
+                    : 'border border-neutral-800 text-neutral-400 hover:text-white',
+                )}
+                onClick={() => onLanguage('spanish')}
+              >
+                Spanish
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="relative overflow-visible">
         <Chip
           label="Pitch"
           token={pitchToken}
@@ -99,6 +165,14 @@ export function CommandButtons({
           disabled={!armed}
           onToggle={() => toggle('pitch')}
         />
+        {armed && open === 'pitch' ? (
+          <div className={popoverClass} role="dialog">
+            <ValuePanel label="Pitch" id="command-pitch" value={pitch} onChange={onPitch} />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="relative overflow-visible">
         <Chip
           label="Rate"
           token={rateToken}
@@ -106,58 +180,17 @@ export function CommandButtons({
           disabled={!armed}
           onToggle={() => toggle('rate')}
         />
-        <span className="text-[11px] text-neutral-600">
-          {armed ? selectedLabel : 'Tap a word · double-click to type'}
-          {' · '}⌘/Ctrl+Enter talks
-        </span>
+        {armed && open === 'rate' ? (
+          <div className={popoverClass} role="dialog">
+            <ValuePanel label="Rate" id="command-rate" value={rate} onChange={onRate} />
+          </div>
+        ) : null}
       </div>
 
-      {armed && open === 'language' ? (
-        <div className="rounded-sm border border-neutral-800 bg-black p-3">
-          <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
-            Language
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={cn(
-                'rounded-sm px-3 py-1.5 text-xs font-medium',
-                language === 'english'
-                  ? 'bg-white text-black'
-                  : 'border border-neutral-800 text-neutral-400 hover:text-white',
-              )}
-              onClick={() => onLanguage('english')}
-            >
-              English
-            </button>
-            <button
-              type="button"
-              className={cn(
-                'rounded-sm px-3 py-1.5 text-xs font-medium',
-                language === 'spanish'
-                  ? 'bg-white text-black'
-                  : 'border border-neutral-800 text-neutral-400 hover:text-white',
-              )}
-              onClick={() => onLanguage('spanish')}
-            >
-              Spanish
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {armed && open === 'pitch' ? (
-        <ValuePanel
-          label="Pitch"
-          id="command-pitch"
-          value={pitch}
-          onChange={onPitch}
-        />
-      ) : null}
-
-      {armed && open === 'rate' ? (
-        <ValuePanel label="Rate" id="command-rate" value={rate} onChange={onRate} />
-      ) : null}
+      <span className="text-[11px] text-neutral-600">
+        {armed ? selectedLabel : 'Tap a word · double-click to type'}
+        {' · '}⌘/Ctrl+Enter talks
+      </span>
     </div>
   )
 }
@@ -174,7 +207,7 @@ function ValuePanel({
   onChange: (n: number) => void
 }) {
   return (
-    <div className="rounded-sm border border-neutral-800 bg-black p-3">
+    <>
       <label
         htmlFor={id}
         className="mb-2 block text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"
@@ -192,6 +225,6 @@ function ValuePanel({
         }}
         className="h-8 w-24 rounded-sm border border-neutral-700 bg-black px-2 font-mono text-sm font-medium text-white outline-none focus:border-white"
       />
-    </div>
+    </>
   )
 }
