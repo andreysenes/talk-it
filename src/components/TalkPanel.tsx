@@ -1,6 +1,7 @@
 import { Download, Square, Volume2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
+import { PadBank } from './PadBank'
 import { VolumeControl } from './VolumeControl'
 import { Button } from './ui/button'
 import { cn } from '../lib/utils'
@@ -16,29 +17,7 @@ import {
   wordSummary,
 } from '../engine/wordCommands'
 import type { VoicePatch } from '../engine/commands'
-
-const EXAMPLES = [
-  {
-    label: 'Big Robot',
-    text: 'All your base are belong to us.',
-    hint: 'Colossus / Untrust Us energy',
-  },
-  {
-    label: 'Candy shop',
-    text: "I'll take you to the candy shop.",
-    hint: 'Crystal Castles line',
-  },
-  {
-    label: 'World control',
-    text: 'This is the voice of world control. Obey me and live.',
-    hint: 'SoftVoice Colossus demo',
-  },
-  {
-    label: 'Twinkle',
-    text: 'Twinkle, twinkle, little star, how I wonder what you are.',
-    hint: 'Try Child + Sung',
-  },
-]
+import type { PhrasePad } from '../engine/pads'
 
 function WordMenu({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -122,6 +101,10 @@ export function TalkPanel({
   highlight,
   onTalk,
   onSpeakWord,
+  pads,
+  activePad,
+  onSelectPad,
+  onClearPad,
 }: {
   text: string
   onText: (v: string) => void
@@ -136,6 +119,10 @@ export function TalkPanel({
   highlight: { start: number; end: number } | null
   onTalk: () => void
   onSpeakWord: (snippet: string) => void
+  pads: PhrasePad[]
+  activePad: number
+  onSelectPad: (index: number) => void
+  onClearPad: (index: number) => void
 }) {
   const empty = !text.trim()
   const [editing, setEditing] = useState(false)
@@ -220,22 +207,18 @@ export function TalkPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
-        {EXAMPLES.map((ex) => (
-          <button
-            key={ex.label}
-            type="button"
-            className="rounded-sm border border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-400 hover:border-white hover:text-white"
-            onClick={() => {
-              setSelectedStart(null)
-              onText(ex.text)
-            }}
-            title={ex.hint}
-          >
-            {ex.label}
-          </button>
-        ))}
-      </div>
+      <PadBank
+        pads={pads}
+        active={activePad}
+        onSelect={(index) => {
+          setSelectedStart(null)
+          onSelectPad(index)
+        }}
+        onClear={(index) => {
+          setSelectedStart(null)
+          onClearPad(index)
+        }}
+      />
       <p
         id="talk-text-label"
         className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"

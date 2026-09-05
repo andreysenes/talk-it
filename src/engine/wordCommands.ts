@@ -90,12 +90,17 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
       offset += chunk.length
       if (!chunk) continue
       if (/^\s+$/.test(chunk)) {
-        if (skipLeadingSpace) {
+        const prev = pieces[pieces.length - 1]
+        if (skipLeadingSpace && prev?.kind === 'text') {
           skipLeadingSpace = false
           continue
         }
+        skipLeadingSpace = false
         pieces.push({ kind: 'text', text: chunk })
         continue
+      }
+      if (skipLeadingSpace && pieces[pieces.length - 1]?.kind === 'word') {
+        pieces.push({ kind: 'text', text: ' ' })
       }
       skipLeadingSpace = false
       pieces.push({

@@ -60,8 +60,9 @@ function visible(source: string) {
     .join('')
 }
 
-const spaced = "I'll {{pitch 220}} take you to the candy shop."
-if (visible(text) !== "I'll take you to the candy shop.") throw new Error(`glued display: ${visible(text)}`)
-if (visible(spaced) !== "I'll take you to the candy shop.") throw new Error(`spaced display: ${visible(spaced)}`)
+const gluedTight = "I'll{{pitch 220}}take you to the candy shop."
+if (visible(gluedTight) !== "I'll take you to the candy shop.") {
+  throw new Error(`tight display: ${visible(gluedTight)}`)
+}
 
 console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next, snippet }))

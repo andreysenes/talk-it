@@ -11,6 +11,7 @@ import {
   type PitchQuality,
   type VocalEffort,
 } from './engine/personalities'
+import { DEFAULT_PADS, normalizePads, type PhrasePad } from './engine/pads'
 import { useAudioOutputs } from './hooks/useAudioOutputs'
 import { useTalkEngine } from './hooks/useTalkEngine'
 
@@ -26,6 +27,8 @@ type Saved = {
   vintage: boolean
   text: string
   volume: number
+  pads?: PhrasePad[]
+  activePad?: number
 }
 
 function loadSaved(): Partial<Saved> {
@@ -53,8 +56,15 @@ export default function App() {
   )
   const [language, setLanguage] = useState<Language>(saved.language ?? 'english')
   const [vintage, setVintage] = useState(saved.vintage ?? true)
+  const [pads, setPads] = useState(() => normalizePads(saved.pads))
+  const [activePad, setActivePad] = useState(() => {
+    const i = saved.activePad
+    if (typeof i === 'number' && i >= 0 && i < pads.length) return i
+    const match = pads.findIndex((p) => p.text === (saved.text ?? ''))
+    return match >= 0 ? match : 0
+  })
   const [text, setText] = useState(
-    saved.text ?? 'All your base are belong to us.',
+    saved.text ?? pads[activePad]?.text ?? DEFAULT_PADS[0]!.text,
   )
   const [volume, setVolume] = useState(() => {
     const n = saved.volume
@@ -93,9 +103,21 @@ export default function App() {
       vintage,
       text,
       volume,
+      pads,
+      activePad,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [personality, pitch, speed, pitchQuality, vocalEffort, language, vintage, text, volume])
+  }, [personality, pitch, speed, pitchQuality, vocalEffort, language, vintage, text, volume, pads, activePad])
+
+  useEffect(() => {
+    setPads((prev) => {
+      const current = prev[activePad]
+      if (!current || current.text === text) return prev
+      const next = [...prev]
+      next[activePad] = { ...current, text }
+      return next
+    })
+  }, [text, activePad])
 
   function selectPersonality(p: Personality) {
     setPersonality(p)
@@ -179,6 +201,20 @@ export default function App() {
             highlight={highlight}
             onTalk={() => void speak(text, settings)}
             onSpeakWord={(snippet) => void speak(snippet, settings)}
+            pads={pads}
+            activePad={activePad}
+            onSelectPad={(index) => {
+              setActivePad(index)
+              setText(pads[index]?.text ?? '')
+            }}
+            onClearPad={(index) => {
+              setPads((prev) => {
+                const next = [...prev]
+                next[index] = { name: '', text: '' }
+                return next
+              })
+              if (index === activePad) setText('')
+            }}
           />
         </main>
       </div>
