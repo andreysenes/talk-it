@@ -50,7 +50,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   const playIdRef = useRef(0)
   const retuneBusyRef = useRef(false)
   const retuneDirtyRef = useRef(false)
-  const retuneRafRef = useRef(0)
+  const retuneTimerRef = useRef(0)
+  const retuneFollowUpRef = useRef(0)
   const pendingRef = useRef<{
     buffer: AudioBuffer
     offset: number
@@ -109,6 +110,10 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     pausedRef.current = false
     pendingRef.current = null
     retuneDirtyRef.current = false
+    window.clearTimeout(retuneTimerRef.current)
+    retuneTimerRef.current = 0
+    window.clearTimeout(retuneFollowUpRef.current)
+    retuneFollowUpRef.current = 0
     elapsedMsRef.current = 0
     try {
       sourceRef.current?.stop()
@@ -169,12 +174,14 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       const prevFade = fadeGainRef.current
       sourceRef.current = null
       fadeGainRef.current = null
+      // Keep the previous buffer audible until the new one is armed, then
+      // overlap a short crossfade so parameter tweaks never go silent.
       if (prev && prevFade && !pausedRef.current) {
         try {
           prevFade.gain.cancelScheduledValues(now)
           prevFade.gain.setValueAtTime(Math.max(0.0001, prevFade.gain.value), now)
-          prevFade.gain.exponentialRampToValueAtTime(0.0001, now + 0.018)
-          prev.stop(now + 0.02)
+          prevFade.gain.exponentialRampToValueAtTime(0.0001, now + 0.045)
+          prev.stop(now + 0.05)
         } catch {
           try {
             prev.stop()
@@ -222,7 +229,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
 
       if (ctx.state === 'suspended') void ctx.resume()
       fade.gain.setValueAtTime(0.0001, now)
-      fade.gain.exponentialRampToValueAtTime(1, now + 0.012)
+      fade.gain.exponentialRampToValueAtTime(1, now + 0.03)
       source.start(now, clamped)
       sourceRef.current = source
       fadeGainRef.current = fade
@@ -248,45 +255,64 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     retuneBusyRef.current = true
     const playId = playIdRef.current
     try {
-      do {
-        retuneDirtyRef.current = false
-        const snap = latestSettingsRef.current
-        if (!snap) break
-        const elapsed = readElapsed()
-        const oldWords = wordsRef.current
-        const { renderUtterance, mapPlayOffsetSec } = await loadSynth()
-        const utterance = renderUtterance(text, snap)
-        if (playId !== playIdRef.current) return
-        if (!utterance.samples.length) break
-        const newDur = utterance.samples.length / utterance.sampleRate
-        let offset: number | null
-        if (loopRef.current && durationMsRef.current > 0) {
-          offset = (elapsed / durationMsRef.current) * newDur
-        } else {
-          offset = mapPlayOffsetSec(elapsed, oldWords, utterance.words)
-        }
-        if (offset == null) {
-          stop()
-          return
-        }
-        const ctx = await ensureContext()
-        if (playId !== playIdRef.current) return
-        const buffer = ctx.createBuffer(1, utterance.samples.length, utterance.sampleRate)
-        buffer.getChannelData(0).set(utterance.samples)
-        if (offset >= buffer.duration - 0.01) {
-          stop()
-          return
-        }
-        armSource(ctx, buffer, offset, utterance.words)
+      retuneDirtyRef.current = false
+      const snap = latestSettingsRef.current
+      if (!snap) return
+
+      // Yield so the current buffer keeps streaming while we re-render.
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 0)
+      })
+      if (playId !== playIdRef.current) return
+
+      const elapsed = readElapsed()
+      const oldDuration = durationMsRef.current
+      const oldWords = wordsRef.current
+      const { renderUtterance, mapPlayOffsetSec } = await loadSynth()
+      const utterance = renderUtterance(text, snap)
+      if (playId !== playIdRef.current) return
+      if (!utterance.samples.length) return
+
+      const newDur = utterance.samples.length / utterance.sampleRate
+      let offset: number
+      if (oldDuration > 0) {
+        // Proportional time keeps playback continuous when rate/scale change length.
+        offset = (elapsed / oldDuration) * newDur
+      } else {
+        offset = mapPlayOffsetSec(elapsed, oldWords, utterance.words) ?? 0
+      }
+      if (!Number.isFinite(offset) || offset < 0) offset = 0
+      if (offset >= newDur - 0.01) {
+        // Past the end of the new render — keep the current audio instead of stopping.
         appliedKeyRef.current = settingsKey(snap)
-        if (!pausedRef.current) setState('speaking')
-      } while (retuneDirtyRef.current)
+        return
+      }
+
+      const ctx = await ensureContext()
+      if (playId !== playIdRef.current) return
+      const buffer = ctx.createBuffer(1, utterance.samples.length, utterance.sampleRate)
+      buffer.getChannelData(0).set(utterance.samples)
+      armSource(ctx, buffer, offset, utterance.words)
+      appliedKeyRef.current = settingsKey(snap)
+      if (!pausedRef.current) setState('speaking')
     } catch {
-      /* keep current audio */
+      /* keep current audio playing */
     } finally {
       retuneBusyRef.current = false
+      if (
+        retuneDirtyRef.current ||
+        (latestSettingsRef.current &&
+          settingsKey(latestSettingsRef.current) !== appliedKeyRef.current)
+      ) {
+        retuneDirtyRef.current = false
+        window.clearTimeout(retuneFollowUpRef.current)
+        retuneFollowUpRef.current = window.setTimeout(() => {
+          retuneFollowUpRef.current = 0
+          void applyRetune()
+        }, 60)
+      }
     }
-  }, [armSource, ensureContext, readElapsed, stop])
+  }, [armSource, ensureContext, readElapsed])
 
   const speak = useCallback(
     async (text: string, settings: TalkSettings) => {
@@ -342,11 +368,12 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       const live = sourceRef.current != null || pendingRef.current != null || pausedRef.current
       if (!live || !textRef.current) return
       if (settingsKey(settings) === appliedKeyRef.current) return
-      if (retuneRafRef.current) return
-      retuneRafRef.current = requestAnimationFrame(() => {
-        retuneRafRef.current = 0
+      // Coalesce slider drags: keep the current voice playing until the gesture settles.
+      window.clearTimeout(retuneTimerRef.current)
+      retuneTimerRef.current = window.setTimeout(() => {
+        retuneTimerRef.current = 0
         void applyRetune()
-      })
+      }, 90)
     },
     [applyRetune],
   )
