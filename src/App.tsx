@@ -99,13 +99,8 @@ export default function App() {
   return (
     <div className="shell min-h-svh px-3 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+        <header>
           <h1 className="sr-only">Talk It!</h1>
-          <div className="flex flex-1 items-center border border-neutral-800 px-3 py-2 text-xs text-neutral-500">
-            Voice: <span className="text-white">{personality.label}</span>
-            <span className="mx-1.5 text-neutral-700">·</span>
-            {personality.engineName}
-          </div>
           <MidiBadge
             audio={audio}
             onPrimeAudio={() => unlock()}
