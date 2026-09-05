@@ -67,10 +67,18 @@ function WordEditor({
 }) {
   const [value, setValue] = useState(text)
   const skipBlur = useRef(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useLayoutEffect(() => {
     setValue(text)
   }, [text])
+
+  useLayoutEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.focus()
+    el.select()
+  }, [])
 
   // Ghost span sizes the field to the glyphs — HTML size= leaves spare room.
   return (
@@ -87,6 +95,7 @@ function WordEditor({
         {value || ' '}
       </span>
       <input
+        ref={inputRef}
         value={value}
         aria-label="Word"
         // Default size=20 expands the grid; size=1 lets the ghost span own width.
@@ -104,8 +113,8 @@ function WordEditor({
             return
           }
           const next = value.replace(/\s+/g, ' ').trim()
-          if (next === text) return
-          onCommit(next)
+          if (next !== text && next) onCommit(next)
+          onDeselect()
         }}
         onKeyDown={(event) => {
           event.stopPropagation()
@@ -310,9 +319,11 @@ export function TalkPanel({
   const live = speaking || paused
   const [editing, setEditing] = useState(false)
   const [selectedStart, setSelectedStart] = useState<number | null>(null)
+  const [renaming, setRenaming] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const textBlockRef = useRef<HTMLDivElement>(null)
   const selectedWordRef = useRef<HTMLSpanElement>(null)
+  const playClickTimerRef = useRef(0)
   const editSourceRef = useRef(text)
   const defaults = useMemo(
     () =>
@@ -375,6 +386,12 @@ export function TalkPanel({
     if (el) commitEdit(el.innerText)
     if (text.trim() || (el?.innerText.trim() ?? '')) setEditing(false)
   }
+
+  useEffect(() => {
+    setRenaming(false)
+  }, [selectedStart])
+
+  useEffect(() => () => window.clearTimeout(playClickTimerRef.current), [])
 
   useEffect(() => {
     if (selectedStart == null) return
@@ -633,12 +650,39 @@ export function TalkPanel({
                 >
                   {on ? (
                     [
-                      live ? (
+                      renaming && !live ? (
+                        <WordEditor
+                          key="edit"
+                          text={word.text}
+                          style={fill}
+                          className={cn(word.muted && 'opacity-50')}
+                          onCommit={renameSelected}
+                          onDeselect={() => {
+                            setRenaming(false)
+                            setSelectedStart(null)
+                          }}
+                        />
+                      ) : (
                         <button
                           key="word"
                           type="button"
                           title={wordSummary(word)}
-                          onClick={() => setSelectedStart(word.start)}
+                          onClick={() => {
+                            const play = () =>
+                              onSpeakWord(wordSpeakSnippet(text, word.start, word.end))
+                            window.clearTimeout(playClickTimerRef.current)
+                            // During live playback there is no rename gesture — play immediately.
+                            if (live) {
+                              play()
+                              return
+                            }
+                            playClickTimerRef.current = window.setTimeout(play, 200)
+                          }}
+                          onDoubleClick={(event) => {
+                            event.preventDefault()
+                            window.clearTimeout(playClickTimerRef.current)
+                            if (!live) setRenaming(true)
+                          }}
                           style={fill}
                           className={cn(
                             wordClass,
@@ -648,15 +692,6 @@ export function TalkPanel({
                         >
                           {word.text}
                         </button>
-                      ) : (
-                        <WordEditor
-                          key="edit"
-                          text={word.text}
-                          style={fill}
-                          className={cn(word.muted && 'opacity-50')}
-                          onCommit={renameSelected}
-                          onDeselect={() => setSelectedStart(null)}
-                        />
                       ),
                       <WordMenu key="menu">
                         <CommandButtons
