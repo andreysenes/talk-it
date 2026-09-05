@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { cn } from '../lib/utils'
 import { PAD_KEYS, midiNoteForPad, padCaption, padIndexFromKey, type PhrasePad } from '../engine/pads'
 import { midiNoteName } from '../engine/midi'
@@ -8,11 +8,13 @@ export function PadBank({
   active,
   onSelect,
   onClear,
+  midi,
 }: {
   pads: PhrasePad[]
   active: number
   onSelect: (index: number, play?: boolean) => void
   onClear: (index: number) => void
+  midi?: ReactNode
 }) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -39,9 +41,12 @@ export function PadBank({
 
   return (
     <div>
-      <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
-        Pads
-      </p>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <p className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
+          Pads
+        </p>
+        {midi}
+      </div>
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
         {pads.map((pad, i) => {
           const on = i === active

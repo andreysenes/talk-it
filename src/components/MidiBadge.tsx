@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { DawMidiHelp } from './DawMidiHelp'
-import { Button } from './ui/button'
 import { cn } from '../lib/utils'
 import { useMidi } from '../hooks/useMidi'
 import type { MidiNoteEvent } from '../engine/midi'
@@ -67,15 +66,7 @@ export function MidiBadge({
   }, [open])
 
   const inName = midi.inputs.find((p) => p.id === midi.inputId)?.name
-  const outName = midi.outputs.find((p) => p.id === midi.outputId)?.name
-  const sinkName =
-    audio.sinks.find((s) => s.id === audio.sinkId)?.label || 'Default out'
   const primary = !midi.enabled ? 'Off' : inName || 'Connected'
-  const secondary = midi.enabled
-    ? audio.sinkId
-      ? sinkName
-      : outName || 'DAW Out'
-    : null
 
   async function toggleMidi() {
     if (midi.enabled) {
@@ -88,33 +79,26 @@ export function MidiBadge({
 
   return (
     <div className="relative" ref={rootRef}>
-      <Button
+      <button
         type="button"
-        variant="export"
-        size="lg"
         aria-expanded={open}
         aria-haspopup="dialog"
+        className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase hover:text-white"
         onClick={() => {
           setOpen((v) => !v)
           if (!open) void audio.unlockLabels()
         }}
       >
-        MIDI:{' '}
-        <span className={midi.enabled ? 'text-white' : 'text-neutral-400'}>
+        Midi
+        <span className={cn('ml-1.5', midi.enabled ? 'text-neutral-300' : 'text-neutral-600')}>
           {primary}
         </span>
-        {secondary ? (
-          <>
-            <span className="mx-1.5 text-neutral-700">·</span>
-            {secondary}
-          </>
-        ) : null}
-      </Button>
+      </button>
 
       {open && (
         <div
           role="dialog"
-          className="absolute top-full left-0 z-20 mt-2 max-h-[min(70vh,36rem)] w-[min(100vw-1.5rem,26rem)] overflow-y-auto border border-neutral-800 bg-[#0c0c0c] p-3"
+          className="absolute top-full right-0 z-30 mt-2 max-h-[min(70vh,36rem)] w-[min(100vw-1.5rem,26rem)] overflow-y-auto border border-neutral-800 bg-[#0c0c0c] p-3"
         >
           <p className="mb-3 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
             DAW · MIDI

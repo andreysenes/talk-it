@@ -290,23 +290,6 @@ export default function App() {
               })
               if (index === activePad) setText('')
             }}
-          />
-          <TalkActions
-            speaking={state === 'speaking'}
-            paused={state === 'paused'}
-            rendering={state === 'rendering'}
-            exporting={state === 'exporting'}
-            empty={!text.trim()}
-            analyser={analyser}
-            onPlay={() => {
-              if (state === 'speaking') void pause()
-              else if (state === 'paused') void resume()
-              else void speak(text, settings)
-            }}
-            onStop={stop}
-            onExport={() => void exportWav(text, settings)}
-            volume={volume}
-            onVolume={setVolume}
             midi={
               <MidiBadge
                 audio={audio}
@@ -336,6 +319,23 @@ export default function App() {
                 }}
               />
             }
+          />
+          <TalkActions
+            speaking={state === 'speaking'}
+            paused={state === 'paused'}
+            rendering={state === 'rendering'}
+            exporting={state === 'exporting'}
+            empty={!text.trim()}
+            analyser={analyser}
+            onPlay={() => {
+              if (state === 'speaking') void pause()
+              else if (state === 'paused') void resume()
+              else void speak(text, settings)
+            }}
+            onStop={stop}
+            onExport={() => void exportWav(text, settings)}
+            volume={volume}
+            onVolume={setVolume}
           />
           <PersonalityGrid
             selectedId={personality.id}

@@ -157,7 +157,6 @@ export function TalkActions({
   onPlay,
   onStop,
   onExport,
-  midi,
   volume,
   onVolume,
   analyser,
@@ -170,7 +169,6 @@ export function TalkActions({
   onPlay: () => void
   onStop: () => void
   onExport: () => void
-  midi: ReactNode
   volume: number
   onVolume: (n: number) => void
   analyser: AnalyserNode | null
@@ -209,7 +207,6 @@ export function TalkActions({
       >
         <Download className="size-4" />
       </Button>
-      {midi}
       <VolumeControl
         value={volume}
         onChange={onVolume}
@@ -245,6 +242,7 @@ export function TalkPanel({
   activePad,
   onSelectPad,
   onClearPad,
+  midi,
 }: {
   text: string
   onText: (v: string) => void
@@ -269,6 +267,7 @@ export function TalkPanel({
   activePad: number
   onSelectPad: (index: number, play?: boolean) => void
   onClearPad: (index: number) => void
+  midi?: ReactNode
 }) {
   const empty = !text.trim()
   const live = speaking || paused
@@ -436,6 +435,7 @@ export function TalkPanel({
       <PadBank
         pads={pads}
         active={activePad}
+        midi={midi}
         onSelect={(index, play) => {
           setSelectedStart(null)
           setEditing(false)
