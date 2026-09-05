@@ -368,7 +368,7 @@ export function serializeBag(bag: CommandBag): string {
     const value = bag[item.key]
     if (typeof value === 'number') bits.push(`{{${item.name} ${fmt(value, item.digits)}}}`)
   }
-  return bits.length ? `${bits.join(' ')} ` : ''
+  return bits.length ? bits.join(' ') : ''
 }
 
 export function mergeBag(existing: CommandBag, patch: VoicePatch): CommandBag {

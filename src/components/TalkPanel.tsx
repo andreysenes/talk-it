@@ -302,7 +302,7 @@ export function TalkPanel({
                 highlight.end > word.start
               const on = selectedStart === word.start
               return (
-                <span key={i} className="relative inline-block">
+                <span key={i} className="relative">
                   <button
                     type="button"
                     title={wordSummary(word)}
@@ -312,7 +312,7 @@ export function TalkPanel({
                     }
                     style={marked ? wordFill(word.pitch, word.rate, word.language) : undefined}
                     className={cn(
-                      'cursor-pointer rounded-[3px] px-0.5 text-left text-inherit',
+                      'inline cursor-pointer rounded-[3px] px-0 text-left text-inherit',
                       spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
                       on && 'ring-1 ring-white',
                       !marked && !spoken && 'hover:bg-neutral-800',

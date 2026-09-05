@@ -58,6 +58,7 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
   const pieces: DisplayPiece[] = []
   let state: VoiceState = { ...FALLBACK_VOICE, ...defaults }
   let pending = { ...CLEAR_FLAGS }
+  let skipLeadingSpace = false
 
   for (const part of parts) {
     if (part.kind === 'cmd') {
@@ -77,6 +78,7 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
       else if (part.name === 'breath') pending.hasBreath = true
       else if (part.name === 'tilt') pending.hasTilt = true
       else if (part.name === 'effort') pending.hasEffort = true
+      skipLeadingSpace = true
       continue
     }
 
@@ -88,9 +90,14 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
       offset += chunk.length
       if (!chunk) continue
       if (/^\s+$/.test(chunk)) {
+        if (skipLeadingSpace) {
+          skipLeadingSpace = false
+          continue
+        }
         pieces.push({ kind: 'text', text: chunk })
         continue
       }
+      skipLeadingSpace = false
       pieces.push({
         kind: 'word',
         word: {
@@ -141,6 +148,9 @@ function commandRegion(source: string, wordStart: number) {
     regionStart = head.length - match[0].length
     head = head.slice(0, regionStart)
   }
+  while (regionStart > 0 && /\s/.test(source[regionStart - 1] ?? '')) {
+    regionStart -= 1
+  }
   return { regionStart, wordStart }
 }
 
@@ -153,10 +163,15 @@ export function setWordVoice(
   const { regionStart } = commandRegion(source, wordStart)
   const existing = bagFromRegion(source.slice(regionStart, wordStart))
   const insert = serializeBag(stripInherited(mergeBag(existing, patch), inherited))
-  return {
-    next: source.slice(0, regionStart) + insert + source.slice(wordStart),
-    wordStart: regionStart + insert.length,
-  }
+  const before = source.slice(0, regionStart)
+  const rest = source.slice(wordStart)
+  const next = insert
+    ? `${before}${before ? ' ' : ''}${insert}${rest}`
+    : `${before}${before && rest ? ' ' : ''}${rest}`
+  const nextStart = insert
+    ? before.length + (before ? 1 : 0) + insert.length
+    : before.length + (before && rest ? 1 : 0)
+  return { next, wordStart: nextStart }
 }
 
 export function wordSpeakSnippet(source: string, wordStart: number, wordEnd: number): string {

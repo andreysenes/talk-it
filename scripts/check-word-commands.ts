@@ -54,4 +54,14 @@ if (!snippet.includes('{{pitch 220}}')) throw new Error(`snippet cmds: ${snippet
 if (!snippet.includes('take')) throw new Error(`snippet word: ${snippet}`)
 if (/I'll/.test(snippet)) throw new Error(`snippet too much: ${snippet}`)
 
+function visible(source: string) {
+  return annotateWords(source, defaults)
+    .map((p) => (p.kind === 'text' ? p.text : p.word.text))
+    .join('')
+}
+
+const spaced = "I'll {{pitch 220}} take you to the candy shop."
+if (visible(text) !== "I'll take you to the candy shop.") throw new Error(`glued display: ${visible(text)}`)
+if (visible(spaced) !== "I'll take you to the candy shop.") throw new Error(`spaced display: ${visible(spaced)}`)
+
 console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next, snippet }))
