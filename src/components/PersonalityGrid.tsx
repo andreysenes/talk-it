@@ -92,27 +92,39 @@ export function PersonalityGrid({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <label
-          htmlFor="personality"
-          className="mb-2 block text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"
-        >
+        <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
           Personality
-        </label>
-        <select
-          id="personality"
-          value={selected.id}
-          onChange={(e) => {
-            const next = PERSONALITIES.find((p) => p.id === e.target.value)
-            if (next) onSelect(next)
-          }}
-          className="h-11 w-full rounded-sm border border-neutral-800 bg-black px-3 text-sm text-white outline-none focus:border-white"
+        </p>
+        <div
+          role="listbox"
+          aria-label="Personality"
+          aria-orientation="horizontal"
+          className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin]"
         >
-          {PERSONALITIES.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-        </select>
+          <div className="flex w-max gap-1">
+            {PERSONALITIES.map((p) => {
+              const on = p.id === selected.id
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="option"
+                  aria-selected={on}
+                  title={p.blurb}
+                  onClick={() => onSelect(p)}
+                  className={cn(
+                    'shrink-0 rounded-sm px-1.5 py-0.5 text-[10px] leading-tight font-medium whitespace-nowrap',
+                    on
+                      ? 'bg-white text-black'
+                      : 'bg-white/10 text-white/75 hover:bg-white/16',
+                  )}
+                >
+                  {p.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
         <p className="mt-2 text-sm leading-relaxed text-neutral-400">{selected.blurb}</p>
       </div>
 
