@@ -68,8 +68,13 @@ function NumberChip({
   onChange: (n: number) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const [live, setLive] = useState(value)
   const span = max - min || 1
-  const pct = Math.min(100, Math.max(0, ((value - min) / span) * 100))
+  const pct = Math.min(100, Math.max(0, ((live - min) / span) * 100))
+
+  useEffect(() => {
+    setLive(value)
+  }, [value])
 
   function setFromPointer(event: React.PointerEvent<HTMLDivElement>) {
     const el = ref.current
@@ -78,9 +83,9 @@ function NumberChip({
     const t = Math.min(1, Math.max(0, (event.clientX - rect.left) / Math.max(1, rect.width)))
     const raw = min + t * span
     const snapped = Math.round(raw / step) * step
-    const next = Math.min(max, Math.max(min, snapped))
-    const rounded = Number(next.toFixed(6))
-    if (rounded !== value) onChange(rounded)
+    const next = Number(Math.min(max, Math.max(min, snapped)).toFixed(6))
+    setLive(next)
+    if (next !== value) onChange(next)
   }
 
   return (
@@ -90,9 +95,9 @@ function NumberChip({
       aria-label={label}
       aria-valuemin={min}
       aria-valuemax={max}
-      aria-valuenow={value}
+      aria-valuenow={live}
       tabIndex={0}
-      className="relative flex w-full cursor-ew-resize overflow-hidden rounded-sm border border-neutral-800 select-none"
+      className="relative flex w-full cursor-ew-resize touch-none overflow-hidden rounded-sm border border-neutral-800 select-none"
       onPointerDown={(event) => {
         event.preventDefault()
         event.currentTarget.setPointerCapture(event.pointerId)
@@ -104,14 +109,14 @@ function NumberChip({
       }}
     >
       <div
-        className="pointer-events-none absolute inset-y-0 left-0 bg-white/20"
+        className="pointer-events-none absolute inset-y-0 left-0 bg-white/40"
         style={{ width: `${pct}%` }}
       />
-      <div className="relative z-10 flex min-w-0 flex-1 items-center px-2.5 py-1.5 text-left text-xs font-medium text-neutral-200">
-        <span className="mr-1.5 text-[10px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+      <div className="relative z-10 flex min-w-0 flex-1 items-center justify-between gap-3 px-2.5 py-1.5 text-left text-xs font-medium text-white">
+        <span className="text-[10px] font-medium tracking-[0.14em] text-neutral-300 uppercase">
           {label}
         </span>
-        <code className="font-mono text-[11px] text-neutral-300">{token}</code>
+        <code className="font-mono text-[11px] text-white">{token}</code>
       </div>
     </div>
   )
