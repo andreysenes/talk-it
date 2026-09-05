@@ -45,6 +45,7 @@ const editorClass =
 
 export function TalkActions({
   speaking,
+  paused,
   rendering,
   exporting,
   empty,
@@ -56,6 +57,7 @@ export function TalkActions({
   onVolume,
 }: {
   speaking: boolean
+  paused: boolean
   rendering: boolean
   exporting: boolean
   empty: boolean
@@ -71,9 +73,15 @@ export function TalkActions({
     <div className="flex flex-wrap items-center gap-2">
       <Button type="button" variant="talk" size="lg" disabled={busy || empty} onClick={onTalk}>
         <Volume2 className="size-5" />
-        {rendering ? 'Building voice…' : speaking ? 'Talking…' : 'Talk It!'}
+        {rendering ? 'Building voice…' : paused ? 'Paused' : speaking ? 'Talking…' : 'Talk It!'}
       </Button>
-      <Button type="button" variant="stop" size="lg" disabled={!speaking} onClick={onStop}>
+      <Button
+        type="button"
+        variant="stop"
+        size="lg"
+        disabled={!speaking && !paused}
+        onClick={onStop}
+      >
         <Square className="size-4 fill-current" />
         Stop
       </Button>
@@ -97,10 +105,13 @@ export function TalkPanel({
   pitchQuality,
   vocalEffort,
   speaking,
+  paused,
   error,
   highlight,
   onTalk,
   onSpeakWord,
+  onPause,
+  onResume,
   pads,
   activePad,
   onSelectPad,
@@ -115,16 +126,20 @@ export function TalkPanel({
   pitchQuality: PitchQuality
   vocalEffort: VocalEffort
   speaking: boolean
+  paused: boolean
   error: string | null
   highlight: { start: number; end: number } | null
   onTalk: () => void
   onSpeakWord: (snippet: string) => void
+  onPause: () => void
+  onResume: () => void
   pads: PhrasePad[]
   activePad: number
   onSelectPad: (index: number) => void
   onClearPad: (index: number) => void
 }) {
   const empty = !text.trim()
+  const live = speaking || paused
   const [editing, setEditing] = useState(false)
   const [selectedStart, setSelectedStart] = useState<number | null>(null)
   const editorRef = useRef<HTMLDivElement>(null)
@@ -153,8 +168,8 @@ export function TalkPanel({
   }, [text, editing])
 
   useLayoutEffect(() => {
-    if (speaking) setEditing(false)
-  }, [speaking])
+    if (live) setEditing(false)
+  }, [live])
 
   useEffect(() => {
     if (selectedStart == null) return
@@ -174,7 +189,7 @@ export function TalkPanel({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== ' ' && event.code !== 'Space') return
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
-      if (editing || empty || selectedStart == null) return
+      if (editing) return
       const target = event.target
       if (
         target instanceof HTMLElement &&
@@ -182,18 +197,48 @@ export function TalkPanel({
       ) {
         return
       }
-      const word = pieces.find(
-        (piece) => piece.kind === 'word' && piece.word.start === selectedStart,
-      )
-      if (!word || word.kind !== 'word') return
+      if (speaking) {
+        event.preventDefault()
+        event.stopPropagation()
+        onPause()
+        return
+      }
+      if (paused) {
+        event.preventDefault()
+        event.stopPropagation()
+        onResume()
+        return
+      }
+      if (empty) return
       event.preventDefault()
       event.stopPropagation()
-      onSpeakWord(wordSpeakSnippet(text, word.word.start, word.word.end))
+      if (selectedStart != null) {
+        const word = pieces.find(
+          (piece) => piece.kind === 'word' && piece.word.start === selectedStart,
+        )
+        if (word && word.kind === 'word') {
+          onSpeakWord(wordSpeakSnippet(text, word.word.start, word.word.end))
+          return
+        }
+      }
+      onTalk()
     }
 
     document.addEventListener('keydown', onKeyDown, true)
     return () => document.removeEventListener('keydown', onKeyDown, true)
-  }, [editing, empty, selectedStart, pieces, text, onSpeakWord])
+  }, [
+    editing,
+    empty,
+    selectedStart,
+    pieces,
+    text,
+    speaking,
+    paused,
+    onSpeakWord,
+    onTalk,
+    onPause,
+    onResume,
+  ])
 
   function applyToSelected(patch: VoicePatch) {
     if (selectedStart == null) return
@@ -237,7 +282,7 @@ export function TalkPanel({
           }
         }}
       >
-        {showEditor && !speaking ? (
+        {showEditor && !live ? (
           <div
             key="editing"
             id="talk-text"
@@ -269,7 +314,7 @@ export function TalkPanel({
             aria-labelledby="talk-text-label"
             className={editorClass}
             onDoubleClick={() => {
-              if (!speaking) {
+              if (!live) {
                 setSelectedStart(null)
                 setEditing(true)
               }
@@ -291,7 +336,7 @@ export function TalkPanel({
                   <button
                     type="button"
                     title={wordSummary(word)}
-                    disabled={speaking}
+                    disabled={live}
                     onClick={() =>
                       setSelectedStart((current) => (current === word.start ? null : word.start))
                     }

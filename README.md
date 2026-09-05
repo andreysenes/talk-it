@@ -19,6 +19,12 @@ npm run dev
 
 Open [http://127.0.0.1:4521](http://127.0.0.1:4521).
 
+## Keyboard
+
+- **Space** — play or pause. Speaks the selected word, or the whole line if none is selected. Press again to pause, and again to resume. Ignored while typing.
+- **⌘/Ctrl+Enter** — speak the whole line.
+- **1–0, -, =** — load and speak pads 1–12.
+
 ```bash
 npm run build
 npm run preview

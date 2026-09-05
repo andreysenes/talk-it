@@ -72,10 +72,8 @@ export default function App() {
   })
 
   const audio = useAudioOutputs()
-  const { state, error, speak, stop, exportWav, unlock, highlight } = useTalkEngine(
-    audio.sinkId,
-    volume / 100,
-  )
+  const { state, error, speak, stop, pause, resume, exportWav, unlock, highlight } =
+    useTalkEngine(audio.sinkId, volume / 100)
   const midiNote = useRef<number | null>(null)
 
   const settings = {
@@ -138,10 +136,14 @@ export default function App() {
           />
           <TalkActions
             speaking={state === 'speaking'}
+            paused={state === 'paused'}
             rendering={state === 'rendering'}
             exporting={state === 'exporting'}
             empty={!text.trim()}
-            onTalk={() => void speak(text, settings)}
+            onTalk={() => {
+              if (state === 'paused') void resume()
+              else void speak(text, settings)
+            }}
             onStop={stop}
             onExport={() => void exportWav(text, settings)}
             volume={volume}
@@ -197,10 +199,16 @@ export default function App() {
             pitchQuality={pitchQuality}
             vocalEffort={vocalEffort}
             speaking={state === 'speaking'}
+            paused={state === 'paused'}
             error={error}
             highlight={highlight}
-            onTalk={() => void speak(text, settings)}
+            onTalk={() => {
+              if (state === 'paused') void resume()
+              else void speak(text, settings)
+            }}
             onSpeakWord={(snippet) => void speak(snippet, settings)}
+            onPause={() => void pause()}
+            onResume={() => void resume()}
             pads={pads}
             activePad={activePad}
             onSelectPad={(index) => {

@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TalkSettings } from '../engine/personalities'
 import type { SpokenWord } from '../engine/synth'
 
-type PlayState = 'idle' | 'rendering' | 'speaking' | 'exporting' | 'error'
+export type PlayState =
+  | 'idle'
+  | 'rendering'
+  | 'speaking'
+  | 'paused'
+  | 'exporting'
+  | 'error'
 
 async function loadSynth() {
   return import('../engine/synth')
@@ -17,6 +23,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   const wordsRef = useRef<SpokenWord[]>([])
   const volumeRef = useRef(volume)
   volumeRef.current = volume
+  const pausedRef = useRef(false)
   const [state, setState] = useState<PlayState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [highlight, setHighlight] = useState<{ start: number; end: number } | null>(null)
@@ -24,6 +31,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
     rafRef.current = 0
+    pausedRef.current = false
     try {
       sourceRef.current?.stop()
     } catch {
@@ -33,6 +41,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     wordsRef.current = []
     setHighlight(null)
     setState('idle')
+    const ctx = ctxRef.current
+    if (ctx && ctx.state === 'suspended') void ctx.resume()
   }, [])
 
   useEffect(() => () => stop(), [stop])
@@ -41,7 +51,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     if (!ctxRef.current) {
       ctxRef.current = new AudioContext()
     }
-    if (ctxRef.current.state === 'suspended') {
+    if (ctxRef.current.state === 'suspended' && !pausedRef.current) {
       await ctxRef.current.resume()
     }
     if (ctxRef.current.setSinkId) {
@@ -127,6 +137,22 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     [ensureContext, stop],
   )
 
+  const pause = useCallback(async () => {
+    const ctx = ctxRef.current
+    if (!ctx || !sourceRef.current) return
+    pausedRef.current = true
+    if (ctx.state === 'running') await ctx.suspend()
+    setState('paused')
+  }, [])
+
+  const resume = useCallback(async () => {
+    const ctx = ctxRef.current
+    if (!ctx || !sourceRef.current) return
+    pausedRef.current = false
+    if (ctx.state === 'suspended') await ctx.resume()
+    setState('speaking')
+  }, [])
+
   const exportWav = useCallback(async (text: string, settings: TalkSettings) => {
     const trimmed = text.trim()
     if (!trimmed) {
@@ -175,5 +201,5 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     await ensureContext()
   }, [ensureContext])
 
-  return { state, error, speak, stop, exportWav, unlock, highlight, setError }
+  return { state, error, speak, stop, pause, resume, exportWav, unlock, highlight, setError }
 }
