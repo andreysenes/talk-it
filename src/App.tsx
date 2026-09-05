@@ -352,6 +352,8 @@ export default function App() {
             onExport={() => void exportWav(text, settings)}
             volume={volume}
             onVolume={setVolume}
+            vintage={vintage}
+            onVintage={setVintage}
           />
           <PersonalityGrid
             selectedId={personality.id}
@@ -371,12 +373,7 @@ export default function App() {
             onVibratoRate={setVibratoRate}
             onScale={setScale}
           />
-          <ParameterPanel
-            language={language}
-            vintage={vintage}
-            onLanguage={setLanguage}
-            onVintage={setVintage}
-          />
+          <ParameterPanel language={language} onLanguage={setLanguage} />
         </main>
       </div>
     </div>

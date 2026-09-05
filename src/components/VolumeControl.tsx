@@ -100,12 +100,16 @@ export function VolumeControl({
   analyser,
   playing,
   paused,
+  vintage,
+  onVintage,
 }: {
   value: number
   onChange: (n: number) => void
   analyser: AnalyserNode | null
   playing: boolean
   paused: boolean
+  vintage: boolean
+  onVintage: (v: boolean) => void
 }) {
   const lastRef = useRef(value > 0 ? value : 80)
   useEffect(() => {
@@ -137,6 +141,24 @@ export function VolumeControl({
         {value}
       </span>
       <WaveMeter analyser={analyser} playing={playing} paused={paused} />
+      <button
+        type="button"
+        title={
+          vintage
+            ? 'Classic SoftVoice DAC — 11 kHz / 8-bit. Click for clean 44 kHz.'
+            : 'Clean 44 kHz. Click for classic SoftVoice 11 kHz / 8-bit.'
+        }
+        aria-pressed={vintage}
+        aria-label={vintage ? 'Classic 11 kHz on' : 'Classic 11 kHz off'}
+        onClick={() => onVintage(!vintage)}
+        className={
+          vintage
+            ? 'shrink-0 font-mono text-[10px] tracking-wide text-neutral-300 hover:text-white'
+            : 'shrink-0 font-mono text-[10px] tracking-wide text-neutral-600 hover:text-neutral-400'
+        }
+      >
+        11k
+      </button>
     </div>
   )
 }

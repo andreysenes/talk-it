@@ -164,6 +164,8 @@ export function TalkActions({
   volume,
   onVolume,
   analyser,
+  vintage,
+  onVintage,
 }: {
   speaking: boolean
   paused: boolean
@@ -178,6 +180,8 @@ export function TalkActions({
   volume: number
   onVolume: (n: number) => void
   analyser: AnalyserNode | null
+  vintage: boolean
+  onVintage: (v: boolean) => void
 }) {
   const busy = rendering || exporting
   const playDisabled = busy || (empty && !speaking && !paused)
@@ -229,6 +233,8 @@ export function TalkActions({
         analyser={analyser}
         playing={speaking}
         paused={paused}
+        vintage={vintage}
+        onVintage={onVintage}
       />
     </div>
   )
