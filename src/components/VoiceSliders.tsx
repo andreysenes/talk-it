@@ -1,6 +1,5 @@
 import { Minus, Plus } from 'lucide-react'
 import { Button } from './ui/button'
-import { PITCH_MAX, PITCH_MIN } from '../engine/personalities'
 
 function Stepper({
   label,
@@ -78,13 +77,7 @@ export function VoiceSliders({
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <Stepper
-        label="Pitch"
-        value={pitch}
-        min={PITCH_MIN}
-        max={PITCH_MAX}
-        onChange={onPitch}
-      />
+      <Stepper label="Pitch" value={pitch} onChange={onPitch} />
       <Stepper label="Speed" value={speed} onChange={onSpeed} />
     </div>
   )

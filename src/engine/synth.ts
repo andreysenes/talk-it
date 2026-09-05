@@ -30,7 +30,8 @@ function clamp(n: number, min: number, max: number) {
 }
 
 export function pitchToHz(pitch: number): number {
-  return clamp(BASE_F0 * (pitch / 100), 40, 700)
+  const safe = Number.isFinite(pitch) && pitch !== 0 ? pitch : 1
+  return Math.max(1, BASE_F0 * (Math.abs(safe) / 100))
 }
 
 export function speedToRateMs(speed: number, quality: PitchQuality): number {
@@ -98,7 +99,7 @@ export function applyEmbeddedCommands(
     else if (cmd === 'english') next = { ...next, language: 'english' }
     else if (cmd.startsWith('pitch')) {
       const n = Number(cmd.split(/\s+/)[1])
-      if (Number.isFinite(n)) next = { ...next, pitch: clamp(n, 50, 500) }
+      if (Number.isFinite(n) && n !== 0) next = { ...next, pitch: n }
     } else if (cmd.startsWith('rate') || cmd.startsWith('speed')) {
       const n = Number(cmd.split(/\s+/)[1])
       if (Number.isFinite(n) && n !== 0) next = { ...next, speed: n }

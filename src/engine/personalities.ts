@@ -1,6 +1,3 @@
-export const PITCH_MIN = 50
-export const PITCH_MAX = 500
-
 export type PitchQuality = 'natural' | 'monotone' | 'sung'
 export type VocalEffort = 'normal' | 'breathy' | 'whispered'
 export type Language = 'english' | 'spanish'
