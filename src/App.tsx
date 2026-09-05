@@ -135,6 +135,9 @@ export default function App() {
           <TalkPanel
             text={text}
             onText={setText}
+            pitch={pitch}
+            speed={speed}
+            language={language}
             speaking={state === 'speaking'}
             rendering={state === 'rendering'}
             exporting={state === 'exporting'}

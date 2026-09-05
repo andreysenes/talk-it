@@ -1,6 +1,9 @@
 import { Download, Square, Volume2 } from 'lucide-react'
+import { useRef } from 'react'
+import { CommandButtons } from './CommandButtons'
 import { Button } from './ui/button'
 import { cn } from '../lib/utils'
+import type { Language } from '../engine/personalities'
 
 const EXAMPLES = [
   {
@@ -25,9 +28,21 @@ const EXAMPLES = [
   },
 ]
 
+function insertToken(text: string, token: string, start: number, end: number) {
+  const before = text.slice(0, start)
+  const after = text.slice(end)
+  const lead = before.length > 0 && !/\s$/.test(before) ? ' ' : ''
+  const trail = after.length > 0 && !/^\s/.test(after) ? ' ' : ''
+  const inserted = `${lead}${token}${trail}`
+  return { next: before + inserted + after, caret: before.length + inserted.length }
+}
+
 export function TalkPanel({
   text,
   onText,
+  pitch,
+  speed,
+  language,
   speaking,
   rendering,
   exporting,
@@ -38,6 +53,9 @@ export function TalkPanel({
 }: {
   text: string
   onText: (v: string) => void
+  pitch: number
+  speed: number
+  language: Language
   speaking: boolean
   rendering: boolean
   exporting: boolean
@@ -48,6 +66,21 @@ export function TalkPanel({
 }) {
   const busy = speaking || rendering || exporting
   const empty = !text.trim()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  function insertCommand(token: string) {
+    const el = textareaRef.current
+    const start = el?.selectionStart ?? text.length
+    const end = el?.selectionEnd ?? text.length
+    const { next, caret } = insertToken(text, token, start, end)
+    onText(next)
+    requestAnimationFrame(() => {
+      const box = textareaRef.current
+      if (!box) return
+      box.focus()
+      box.setSelectionRange(caret, caret)
+    })
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -56,6 +89,8 @@ export function TalkPanel({
       </label>
       <textarea
         id="talk-text"
+        name="talk-text"
+        ref={textareaRef}
         value={text}
         onChange={(e) => onText(e.target.value)}
         placeholder="Type anything. Talk It! will speak it in the selected voice."
@@ -75,15 +110,13 @@ export function TalkPanel({
         <p className="text-sm font-semibold text-red-700" role="alert">
           {error}
         </p>
-      ) : (
-        <p className="text-xs text-slate-600">
-          Embedded commands work like the original engine:{' '}
-          <code className="rounded bg-white/80 px-1">{'{{spanish}}'}</code>{' '}
-          <code className="rounded bg-white/80 px-1">{'{{pitch 66}}'}</code>{' '}
-          <code className="rounded bg-white/80 px-1">{'{{rate 138}}'}</code>
-          . ⌘/Ctrl+Enter talks.
-        </p>
-      )}
+      ) : null}
+      <CommandButtons
+        language={language}
+        pitch={pitch}
+        rate={speed}
+        onInsert={insertCommand}
+      />
 
       <div className="flex flex-wrap gap-2">
         <Button
