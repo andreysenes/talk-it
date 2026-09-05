@@ -4,6 +4,7 @@ import {
   inheritedBeforeWord,
   replaceWordText,
   resetWordVoice,
+  rewriteVisibleText,
   setWordMuted,
   setWordVoice,
   wordSpeakSnippet,
@@ -143,5 +144,17 @@ if (/\{\{/.test(reset.next)) throw new Error(`reset: ${reset.next}`)
 if (visible(reset.next) !== "I'll take you to the candy shop.") {
   throw new Error(`reset display: ${visible(reset.next)}`)
 }
+
+const rewritten = rewriteVisibleText(
+  text,
+  "I'll grab you to the candy shop.",
+  defaults,
+)
+if (!rewritten.includes('{{pitch 220}}')) throw new Error(`rewrite lost pitch: ${rewritten}`)
+if (visible(rewritten) !== "I'll grab you to the candy shop.") {
+  throw new Error(`rewrite display: ${visible(rewritten)}`)
+}
+const grab = wordsFromPieces(annotateWords(rewritten, defaults)).find((w) => w.text === 'grab')
+if (!grab?.hasPitch || grab.pitch !== 220) throw new Error(`grab: ${JSON.stringify(grab)}`)
 
 console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next, snippet, muted: muted.next }))

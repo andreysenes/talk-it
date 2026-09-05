@@ -179,6 +179,32 @@ export function visibleText(source: string, defaults: VoiceDefaults): string {
     .join('')
 }
 
+/** Rebuild source from plain words, keeping each word's prior {{commands}} by index. */
+export function rewriteVisibleText(
+  source: string,
+  nextVisible: string,
+  defaults: VoiceDefaults,
+): string {
+  const cleaned = nextVisible.replace(/\s+/g, ' ').trim()
+  if (!cleaned) return ''
+  const oldWords = wordsFromPieces(annotateWords(source, defaults))
+  const nextWords = cleaned.split(' ')
+  const parts: string[] = []
+  for (let i = 0; i < nextWords.length; i++) {
+    const token = nextWords[i]!
+    const old = oldWords[i]
+    if (!old) {
+      parts.push(token)
+      continue
+    }
+    const { regionStart, wordStart } = commandRegion(source, old.start)
+    const region = source.slice(regionStart, wordStart)
+    const insert = serializeBag(bagFromRegion(region), regionIsMuted(region))
+    parts.push(insert ? `${insert} ${token}` : token)
+  }
+  return parts.join(' ')
+}
+
 export function replaceWordText(
   source: string,
   wordStart: number,

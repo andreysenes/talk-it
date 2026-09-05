@@ -1,4 +1,4 @@
-import { Download, Pause, Play, Repeat, Square } from 'lucide-react'
+import { Download, Pause, Pencil, Play, Repeat, Square } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
 import { PadBank } from './PadBank'
@@ -13,8 +13,10 @@ import {
   inheritedBeforeWord,
   replaceWordText,
   resetWordVoice,
+  rewriteVisibleText,
   setWordMuted,
   setWordVoice,
+  visibleText,
   wordFill,
   wordIsMarked,
   wordSpeakSnippet,
@@ -290,6 +292,7 @@ export function TalkPanel({
   const editorRef = useRef<HTMLDivElement>(null)
   const textBlockRef = useRef<HTMLDivElement>(null)
   const selectedWordRef = useRef<HTMLSpanElement>(null)
+  const editSourceRef = useRef(text)
   const defaults = useMemo(
     () =>
       defaultsFromSettings({
@@ -309,16 +312,48 @@ export function TalkPanel({
   const pieces = useMemo(() => annotateWords(text, defaults), [text, defaults])
 
   useLayoutEffect(() => {
-    if (!editing) return
+    if (!editing || live) return
     const el = editorRef.current
     if (!el) return
-    if (el.innerText === text) return
-    el.innerText = text
-  }, [text, editing])
+    if (el.dataset.seeded === '1') return
+    const visible = visibleText(editSourceRef.current, defaults)
+    el.textContent = visible
+    el.dataset.seeded = '1'
+    el.focus()
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    range.collapse(false)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }, [editing, live, defaults])
+
+  useLayoutEffect(() => {
+    if (editing) return
+    const el = editorRef.current
+    if (el) delete el.dataset.seeded
+  }, [editing])
 
   useLayoutEffect(() => {
     if (live) setEditing(false)
   }, [live])
+
+  function beginEdit() {
+    if (live) return
+    setSelectedStart(null)
+    editSourceRef.current = text
+    setEditing(true)
+  }
+
+  function commitEdit(raw: string) {
+    onText(rewriteVisibleText(editSourceRef.current, raw, defaults))
+  }
+
+  function finishEdit() {
+    const el = editorRef.current
+    if (el) commitEdit(el.innerText)
+    if (text.trim() || (el?.innerText.trim() ?? '')) setEditing(false)
+  }
 
   useEffect(() => {
     if (selectedStart == null) return
@@ -461,18 +496,35 @@ export function TalkPanel({
           onClearPad(index)
         }}
       />
-      <p
-        id="talk-text-label"
-        className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"
-      >
-        What to say
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p
+          id="talk-text-label"
+          className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"
+        >
+          What to say
+        </p>
+        {!live && !empty && !editing ? (
+          <button
+            type="button"
+            onClick={beginEdit}
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase hover:text-white"
+          >
+            <Pencil className="size-3" />
+            Edit
+          </button>
+        ) : null}
+      </div>
       <div
         ref={textBlockRef}
         className="relative"
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
             e.preventDefault()
+            if (editing) {
+              finishEdit()
+              onTalk()
+              return
+            }
             onTalk()
           }
         }}
@@ -489,18 +541,29 @@ export function TalkPanel({
             suppressContentEditableWarning
             tabIndex={0}
             className={cn(editorClass, 'cursor-text caret-white')}
-            onFocus={() => setEditing(true)}
+            onFocus={() => {
+              if (!editing) {
+                editSourceRef.current = text
+                setEditing(true)
+              }
+            }}
             onInput={(e) => {
               if (!e.currentTarget.isContentEditable) return
-              onText(e.currentTarget.innerText)
+              commitEdit(e.currentTarget.innerText)
             }}
             onPaste={(e) => {
               e.preventDefault()
               const clip = e.clipboardData.getData('text/plain')
               document.execCommand('insertText', false, clip)
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                finishEdit()
+              }
+            }}
             onBlur={() => {
-              if (text.trim()) setEditing(false)
+              finishEdit()
             }}
           />
         ) : (
