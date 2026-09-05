@@ -108,6 +108,13 @@ export function CommandButtons({
         />
         <span className="text-[11px] text-slate-500">⌘/Ctrl+Enter talks</span>
       </div>
+      <p className="text-[11px] leading-relaxed text-slate-500">
+        Commands have no close tag — they stick from that word until the next command of
+        the same kind. Example:{' '}
+        <code className="rounded bg-white/80 px-1 font-mono text-[10px]">
+          {'{{spanish}}La {{rate 140}}cocaína {{rate 310}}no es buena para su salud.'}
+        </code>
+      </p>
 
       {open === 'language' && (
         <div className="rounded-xl border border-slate-800/10 bg-white/80 p-3">

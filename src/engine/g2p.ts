@@ -610,6 +610,7 @@ export function phonesToArpabet(
   chunks: Array<{ phones: Phone[]; pause?: string }>,
   style: 'natural' | 'monotone' | 'sung',
   question: boolean,
+  applyContour = true,
 ): string {
   const tokens: string[] = []
   let vowelIndex = 0
@@ -637,7 +638,7 @@ export function phonesToArpabet(
     if (chunk.pause) tokens.push(chunk.pause)
   }
 
-  if (style === 'natural' && vowels.length) {
+  if (applyContour && style === 'natural' && vowels.length) {
     const last = vowels[vowels.length - 1]
     if (typeof last === 'number' && tokens[last] && !tokens[last].includes('(')) {
       const base = tokens[last].replace(/[!].*$/, '').replace(/[+-].*$/, '')

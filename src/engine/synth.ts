@@ -86,41 +86,84 @@ function voicePrefix(settings: TalkSettings): string {
   ].join(' ')
 }
 
-const COMMAND_RE = /\{\{\s*(spanish|english|pitch\s+\d+|rate\s+\d+|speed\s+\d+)\s*\}\}/gi
+const COMMAND_RE =
+  /\{\{\s*(spanish|english|pitch\s+-?\d+|rate\s+-?\d+|speed\s+-?\d+)\s*\}\}/gi
 
-export function applyEmbeddedCommands(
-  text: string,
-  settings: TalkSettings,
-): { text: string; settings: TalkSettings } {
-  let next: TalkSettings = { ...settings }
-  const cleaned = text.replace(COMMAND_RE, (raw) => {
-    const cmd = raw.slice(2, -2).trim().toLowerCase()
-    if (cmd === 'spanish') next = { ...next, language: 'spanish' }
-    else if (cmd === 'english') next = { ...next, language: 'english' }
-    else if (cmd.startsWith('pitch')) {
-      const n = Number(cmd.split(/\s+/)[1])
-      if (Number.isFinite(n) && n !== 0) next = { ...next, pitch: n }
-    } else if (cmd.startsWith('rate') || cmd.startsWith('speed')) {
-      const n = Number(cmd.split(/\s+/)[1])
-      if (Number.isFinite(n) && n !== 0) next = { ...next, speed: n }
+type Embedded =
+  | { kind: 'text'; text: string }
+  | { kind: 'spanish' }
+  | { kind: 'english' }
+  | { kind: 'pitch'; value: number }
+  | { kind: 'rate'; value: number }
+
+export function parseEmbedded(text: string): Embedded[] {
+  const out: Embedded[] = []
+  const re = new RegExp(COMMAND_RE.source, 'gi')
+  let last = 0
+  let match: RegExpExecArray | null
+  while ((match = re.exec(text))) {
+    if (match.index > last) {
+      out.push({ kind: 'text', text: text.slice(last, match.index) })
     }
-    return ' '
-  })
-  return { text: cleaned, settings: next }
+    const body = (match[1] ?? '').trim().toLowerCase()
+    if (body === 'spanish' || body === 'english') {
+      out.push({ kind: body })
+    } else {
+      const [name, raw] = body.split(/\s+/)
+      const value = Number(raw)
+      if (Number.isFinite(value) && value !== 0) {
+        out.push({ kind: name === 'pitch' ? 'pitch' : 'rate', value })
+      }
+    }
+    last = match.index + match[0].length
+  }
+  if (last < text.length) out.push({ kind: 'text', text: text.slice(last) })
+  return out
 }
 
 export function textToPhonemeString(
   text: string,
   settings: TalkSettings,
 ): string {
-  const { text: cleaned, settings: resolved } = applyEmbeddedCommands(
-    text,
-    settings,
+  const parts = parseEmbedded(text)
+  const tokens: string[] = [voicePrefix(settings)]
+  let language = settings.language
+  const question = /\?\s*$/.test(text.replace(COMMAND_RE, ' '))
+  const lastTextIndex = parts.reduce(
+    (acc, part, i) => (part.kind === 'text' && part.text.trim() ? i : acc),
+    -1,
   )
-  const question = /\?\s*$/.test(cleaned)
-  const chunks = textToPhones(cleaned, resolved.language)
-  const arpabet = phonesToArpabet(chunks, resolved.pitchQuality, question)
-  return `${voicePrefix(resolved)} ${arpabet}`.trim()
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]
+    if (!part) continue
+    if (part.kind === 'spanish') {
+      language = 'spanish'
+      continue
+    }
+    if (part.kind === 'english') {
+      language = 'english'
+      continue
+    }
+    if (part.kind === 'pitch') {
+      tokens.push(`b${pitchToHz(part.value).toFixed(1)}`)
+      continue
+    }
+    if (part.kind === 'rate') {
+      tokens.push(`r${speedToRateMs(part.value, settings.pitchQuality).toFixed(0)}`)
+      continue
+    }
+    const chunks = textToPhones(part.text, language)
+    const arpabet = phonesToArpabet(
+      chunks,
+      settings.pitchQuality,
+      question && i === lastTextIndex,
+      i === lastTextIndex,
+    )
+    if (arpabet) tokens.push(arpabet)
+  }
+
+  return tokens.join(' ').trim()
 }
 
 function crush8bit(samples: Float32Array, fromRate: number): {
