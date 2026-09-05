@@ -98,34 +98,30 @@ export function PersonalityGrid({
         <div
           role="listbox"
           aria-label="Personality"
-          aria-orientation="horizontal"
-          className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin]"
+          className="flex flex-wrap gap-1.5"
         >
-          <div className="flex w-max gap-1">
-            {PERSONALITIES.map((p) => {
-              const on = p.id === selected.id
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  role="option"
-                  aria-selected={on}
-                  title={p.blurb}
-                  onClick={() => onSelect(p)}
-                  className={cn(
-                    'shrink-0 rounded-sm px-1.5 py-0.5 text-[10px] leading-tight font-medium whitespace-nowrap',
-                    on
-                      ? 'bg-white text-black'
-                      : 'bg-white/10 text-white/75 hover:bg-white/16',
-                  )}
-                >
-                  {p.label}
-                </button>
-              )
-            })}
-          </div>
+          {PERSONALITIES.map((p) => {
+            const on = p.id === selected.id
+            return (
+              <button
+                key={p.id}
+                type="button"
+                role="option"
+                aria-selected={on}
+                title={p.blurb}
+                onClick={() => onSelect(p)}
+                className={cn(
+                  'rounded-sm px-2.5 py-1 text-xs font-medium whitespace-nowrap',
+                  on
+                    ? 'bg-white text-black'
+                    : 'bg-white/10 text-white/75 hover:bg-white/16',
+                )}
+              >
+                {p.label}
+              </button>
+            )
+          })}
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-neutral-400">{selected.blurb}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
