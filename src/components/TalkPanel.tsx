@@ -41,22 +41,19 @@ const EXAMPLES = [
 
 function WordMenu({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [side, setSide] = useState<'right' | 'left'>('right')
+  const [alignRight, setAlignRight] = useState(false)
 
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
     const rect = el.getBoundingClientRect()
-    setSide(rect.right > window.innerWidth - 16 ? 'left' : 'right')
+    setAlignRight(rect.right > window.innerWidth - 16)
   }, [])
 
   return (
     <div
       ref={ref}
-      className={cn(
-        'absolute top-0 z-40',
-        side === 'right' ? 'left-full ml-1.5' : 'right-full mr-1.5',
-      )}
+      className={cn('absolute top-full z-40 mt-1', alignRight ? 'right-0' : 'left-0')}
     >
       {children}
     </div>
@@ -195,6 +192,22 @@ export function TalkPanel({
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        {EXAMPLES.map((ex) => (
+          <button
+            key={ex.label}
+            type="button"
+            className="rounded-sm border border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-400 hover:border-white hover:text-white"
+            onClick={() => {
+              setSelectedStart(null)
+              onText(ex.text)
+            }}
+            title={ex.hint}
+          >
+            {ex.label}
+          </button>
+        ))}
+      </div>
       <p
         id="talk-text-label"
         className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"
@@ -261,7 +274,7 @@ export function TalkPanel({
                 highlight.end > word.start
               const on = selectedStart === word.start
               return (
-                <span key={word.start} className="relative inline-block">
+                <span key={i} className="relative inline-block">
                   <button
                     type="button"
                     title={wordSummary(word)}
@@ -303,23 +316,6 @@ export function TalkPanel({
           {error}
         </p>
       ) : null}
-
-      <div className="flex flex-wrap gap-2 pt-1">
-        {EXAMPLES.map((ex) => (
-          <button
-            key={ex.label}
-            type="button"
-            className="rounded-sm border border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-400 hover:border-white hover:text-white"
-            onClick={() => {
-              setSelectedStart(null)
-              onText(ex.text)
-            }}
-            title={ex.hint}
-          >
-            {ex.label}
-          </button>
-        ))}
-      </div>
     </div>
   )
 }

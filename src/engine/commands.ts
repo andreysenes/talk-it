@@ -86,6 +86,8 @@ export const COMMAND_CHIPS: Array<{
   kind: 'choice' | 'number'
   token: (state: VoiceState) => string
   step?: number
+  min?: number
+  max?: number
   allowZero?: boolean
   choices?: Array<{ id: string; label: string }>
 }> = [
@@ -121,14 +123,32 @@ export const COMMAND_CHIPS: Array<{
       { id: 'whispered', label: 'Whispered' },
     ],
   },
-  { id: 'pitch', label: 'Pitch', kind: 'number', token: (s) => `{{pitch ${fmt(s.pitch, 0)}}}`, step: 1 },
-  { id: 'rate', label: 'Rate', kind: 'number', token: (s) => `{{rate ${fmt(s.rate, 0)}}}`, step: 1 },
+  {
+    id: 'pitch',
+    label: 'Pitch',
+    kind: 'number',
+    token: (s) => `{{pitch ${fmt(s.pitch, 0)}}}`,
+    step: 1,
+    min: 1,
+    max: 400,
+  },
+  {
+    id: 'rate',
+    label: 'Rate',
+    kind: 'number',
+    token: (s) => `{{rate ${fmt(s.rate, 0)}}}`,
+    step: 1,
+    min: 1,
+    max: 400,
+  },
   {
     id: 'scale',
     label: 'Scale',
     kind: 'number',
     token: (s) => `{{scale ${fmt(s.scale, 2)}}}`,
     step: 0.01,
+    min: 0.4,
+    max: 1.8,
     allowZero: true,
   },
   {
@@ -137,6 +157,8 @@ export const COMMAND_CHIPS: Array<{
     kind: 'number',
     token: (s) => `{{vibrato ${fmt(s.vibrato, 1)}}}`,
     step: 0.1,
+    min: 0,
+    max: 16,
     allowZero: true,
   },
   {
@@ -145,6 +167,8 @@ export const COMMAND_CHIPS: Array<{
     kind: 'number',
     token: (s) => `{{vibrate ${fmt(s.vibrate, 1)}}}`,
     step: 0.1,
+    min: 0.5,
+    max: 12,
     allowZero: true,
   },
   {
@@ -153,6 +177,8 @@ export const COMMAND_CHIPS: Array<{
     kind: 'number',
     token: (s) => `{{tremolo ${fmt(s.tremolo, 2)}}}`,
     step: 0.01,
+    min: 0,
+    max: 1,
     allowZero: true,
   },
   {
@@ -161,6 +187,8 @@ export const COMMAND_CHIPS: Array<{
     kind: 'number',
     token: (s) => `{{trrate ${fmt(s.trrate, 1)}}}`,
     step: 0.1,
+    min: 0.5,
+    max: 12,
     allowZero: true,
   },
   {
@@ -169,6 +197,8 @@ export const COMMAND_CHIPS: Array<{
     kind: 'number',
     token: (s) => `{{breath ${fmt(s.breath, 2)}}}`,
     step: 0.01,
+    min: 0,
+    max: 1,
     allowZero: true,
   },
   {
@@ -177,6 +207,8 @@ export const COMMAND_CHIPS: Array<{
     kind: 'number',
     token: (s) => `{{tilt ${fmt(s.tilt, 2)}}}`,
     step: 0.01,
+    min: -0.9,
+    max: 0.9,
     allowZero: true,
   },
   {
@@ -185,6 +217,8 @@ export const COMMAND_CHIPS: Array<{
     kind: 'number',
     token: (s) => `{{effort ${fmt(s.effort, 2)}}}`,
     step: 0.01,
+    min: 0,
+    max: 1,
     allowZero: true,
   },
 ]

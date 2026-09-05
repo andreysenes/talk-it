@@ -10,7 +10,7 @@ import {
 
 const panelClass = 'rounded-sm border border-neutral-800 bg-black p-2.5'
 
-function Chip({
+function ChoiceChip({
   label,
   token,
   open,
@@ -46,6 +46,73 @@ function Chip({
       >
         <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
       </button>
+    </div>
+  )
+}
+
+function NumberChip({
+  label,
+  token,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string
+  token: string
+  value: number
+  min: number
+  max: number
+  step: number
+  onChange: (n: number) => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const span = max - min || 1
+  const pct = Math.min(100, Math.max(0, ((value - min) / span) * 100))
+
+  function setFromPointer(event: React.PointerEvent<HTMLDivElement>) {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const t = Math.min(1, Math.max(0, (event.clientX - rect.left) / Math.max(1, rect.width)))
+    const raw = min + t * span
+    const snapped = Math.round(raw / step) * step
+    const next = Math.min(max, Math.max(min, snapped))
+    const rounded = Number(next.toFixed(6))
+    if (rounded !== value) onChange(rounded)
+  }
+
+  return (
+    <div
+      ref={ref}
+      role="slider"
+      aria-label={label}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value}
+      tabIndex={0}
+      className="relative flex w-full cursor-ew-resize overflow-hidden rounded-sm border border-neutral-800 select-none"
+      onPointerDown={(event) => {
+        event.preventDefault()
+        event.currentTarget.setPointerCapture(event.pointerId)
+        setFromPointer(event)
+      }}
+      onPointerMove={(event) => {
+        if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+        setFromPointer(event)
+      }}
+    >
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 bg-white/20"
+        style={{ width: `${pct}%` }}
+      />
+      <div className="relative z-10 flex min-w-0 flex-1 items-center px-2.5 py-1.5 text-left text-xs font-medium text-neutral-200">
+        <span className="mr-1.5 text-[10px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+          {label}
+        </span>
+        <code className="font-mono text-[11px] text-neutral-300">{token}</code>
+      </div>
     </div>
   )
 }
@@ -89,19 +156,30 @@ export function CommandButtons({
   return (
     <div
       ref={rootRef}
-      className="flex max-h-[min(70vh,28rem)] w-max flex-col gap-1 overflow-y-auto overflow-x-visible rounded-sm bg-[#0c0c0c] p-1 shadow-lg shadow-black/60"
+      className="flex max-h-[min(70vh,28rem)] w-max flex-col gap-1 overflow-y-auto rounded-sm bg-[#0c0c0c] p-1 shadow-lg shadow-black/60"
     >
-      {COMMAND_CHIPS.map((chip) => (
-        <div key={chip.id} className="flex w-full flex-col gap-1">
-          <Chip
+      {COMMAND_CHIPS.map((chip) =>
+        chip.kind === 'number' ? (
+          <NumberChip
+            key={chip.id}
             label={chip.label}
             token={chip.token(state)}
-            open={open === chip.id}
-            onToggle={() => toggle(chip.id)}
+            value={state[chip.id] as number}
+            min={chip.min ?? 0}
+            max={chip.max ?? 1}
+            step={chip.step ?? 0.01}
+            onChange={(n) => onPatch({ [chip.id]: n } as VoicePatch)}
           />
-          {open === chip.id ? (
-            <div className={panelClass} role="dialog">
-              {chip.kind === 'choice' && chip.choices ? (
+        ) : (
+          <div key={chip.id} className="flex w-full flex-col gap-1">
+            <ChoiceChip
+              label={chip.label}
+              token={chip.token(state)}
+              open={open === chip.id}
+              onToggle={() => toggle(chip.id)}
+            />
+            {open === chip.id && chip.choices ? (
+              <div className={panelClass} role="dialog">
                 <div className="flex flex-col gap-2">
                   {chip.choices.map((choice) => {
                     const on = state[chip.id] === choice.id
@@ -122,61 +200,11 @@ export function CommandButtons({
                     )
                   })}
                 </div>
-              ) : (
-                <ValuePanel
-                  label={chip.label}
-                  id={`command-${chip.id}`}
-                  value={state[chip.id] as number}
-                  step={chip.step}
-                  allowZero={chip.allowZero}
-                  onChange={(n) => onPatch({ [chip.id]: n } as VoicePatch)}
-                />
-              )}
-            </div>
-          ) : null}
-        </div>
-      ))}
+              </div>
+            ) : null}
+          </div>
+        ),
+      )}
     </div>
-  )
-}
-
-function ValuePanel({
-  label,
-  id,
-  value,
-  step,
-  allowZero,
-  onChange,
-}: {
-  label: string
-  id: string
-  value: number
-  step?: number
-  allowZero?: boolean
-  onChange: (n: number) => void
-}) {
-  return (
-    <>
-      <label
-        htmlFor={id}
-        className="mb-2 block text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"
-      >
-        {label}
-      </label>
-      <input
-        id={id}
-        name={id}
-        type="number"
-        step={step}
-        value={value}
-        onChange={(e) => {
-          const n = Number(e.target.value)
-          if (!Number.isFinite(n)) return
-          if (!allowZero && n === 0) return
-          onChange(n)
-        }}
-        className="h-8 w-24 rounded-sm border border-neutral-700 bg-black px-2 font-mono text-sm font-medium text-white outline-none focus:border-white"
-      />
-    </>
   )
 }
