@@ -1,5 +1,13 @@
 export const PAD_COUNT = 12
 
+export const PAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='] as const
+
+export function padIndexFromKey(event: KeyboardEvent): number | null {
+  const key = event.key
+  const i = PAD_KEYS.indexOf(key as (typeof PAD_KEYS)[number])
+  return i >= 0 ? i : null
+}
+
 export type PhrasePad = {
   name: string
   text: string
@@ -43,7 +51,7 @@ export function padCaption(pad: PhrasePad, index: number): string {
     .replace(/\{\{[^}]+\}\}/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-  if (!visible) return String(index + 1)
+  if (!visible) return PAD_KEYS[index] ?? String(index + 1)
   const words = visible.split(' ').slice(0, 3).join(' ')
   return words.length > 22 ? `${words.slice(0, 20)}…` : words
 }

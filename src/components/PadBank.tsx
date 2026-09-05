@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { cn } from '../lib/utils'
-import { padCaption, type PhrasePad } from '../engine/pads'
+import { PAD_KEYS, padCaption, padIndexFromKey, type PhrasePad } from '../engine/pads'
 
 export function PadBank({
   pads,
@@ -12,6 +13,29 @@ export function PadBank({
   onSelect: (index: number) => void
   onClear: (index: number) => void
 }) {
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT')
+      ) {
+        return
+      }
+      const index = padIndexFromKey(event)
+      if (index == null) return
+      event.preventDefault()
+      onSelect(index)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onSelect])
+
   return (
     <div>
       <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
@@ -27,8 +51,8 @@ export function PadBank({
               type="button"
               title={
                 filled
-                  ? `${padCaption(pad, i)} · right-click to clear`
-                  : `Pad ${i + 1} · tap to load, then type to save`
+                  ? `${padCaption(pad, i)} · key ${PAD_KEYS[i]} · right-click to clear`
+                  : `Pad ${PAD_KEYS[i]} · tap or press ${PAD_KEYS[i]} to load, then type to save`
               }
               onClick={() => onSelect(i)}
               onContextMenu={(event) => {
@@ -48,7 +72,7 @@ export function PadBank({
                   on ? 'text-neutral-500' : 'text-neutral-600',
                 )}
               >
-                {String(i + 1).padStart(2, '0')}
+                {PAD_KEYS[i]}
               </span>
               <span className="mt-0.5 block truncate text-xs font-medium">
                 {padCaption(pad, i)}
@@ -57,7 +81,7 @@ export function PadBank({
                 <span
                   role="button"
                   tabIndex={0}
-                  aria-label={`Clear pad ${i + 1}`}
+                  aria-label={`Clear pad ${PAD_KEYS[i]}`}
                   className={cn(
                     'absolute top-1 right-1 flex size-4 items-center justify-center rounded-sm text-sm leading-none',
                     on ? 'text-neutral-400 hover:bg-black/10 hover:text-black' : 'text-neutral-600 hover:bg-white/10 hover:text-white',
