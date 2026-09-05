@@ -10,7 +10,7 @@ export function PadBank({
 }: {
   pads: PhrasePad[]
   active: number
-  onSelect: (index: number) => void
+  onSelect: (index: number, play?: boolean) => void
   onClear: (index: number) => void
 }) {
   useEffect(() => {
@@ -29,7 +29,7 @@ export function PadBank({
       const index = padIndexFromKey(event)
       if (index == null) return
       event.preventDefault()
-      onSelect(index)
+      onSelect(index, true)
     }
 
     window.addEventListener('keydown', onKeyDown)
@@ -51,8 +51,8 @@ export function PadBank({
               type="button"
               title={
                 filled
-                  ? `${padCaption(pad, i)} · key ${PAD_KEYS[i]} · right-click to clear`
-                  : `Pad ${PAD_KEYS[i]} · tap or press ${PAD_KEYS[i]} to load, then type to save`
+                  ? `${padCaption(pad, i)} · ${PAD_KEYS[i]} talks · right-click to clear`
+                  : `Pad ${PAD_KEYS[i]} · press ${PAD_KEYS[i]} to talk after you save a line`
               }
               onClick={() => onSelect(i)}
               onContextMenu={(event) => {

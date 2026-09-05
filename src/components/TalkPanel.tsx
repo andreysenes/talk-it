@@ -210,9 +210,11 @@ export function TalkPanel({
       <PadBank
         pads={pads}
         active={activePad}
-        onSelect={(index) => {
+        onSelect={(index, play) => {
           setSelectedStart(null)
           onSelectPad(index)
+          const line = pads[index]?.text.trim()
+          if (play && line) onSpeakWord(line)
         }}
         onClear={(index) => {
           setSelectedStart(null)
