@@ -9,7 +9,9 @@ import type { Language, Personality, PitchQuality, VocalEffort } from '../engine
 import { defaultsFromSettings } from '../engine/synth'
 import {
   annotateWords,
+  appendVisible,
   inheritedBeforeWord,
+  replaceWordText,
   setWordVoice,
   wordFill,
   wordIsMarked,
@@ -42,6 +44,105 @@ function WordMenu({ children }: { children: ReactNode }) {
 
 const editorClass =
   'w-full min-h-[1.25em] px-0 py-1 font-sans text-2xl leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:text-3xl'
+
+const wordClass =
+  'inline rounded-[3px] px-0 text-left text-2xl leading-snug font-medium tracking-tight text-inherit sm:text-3xl'
+
+function WordEditor({
+  text,
+  className,
+  style,
+  onCommit,
+  onDeselect,
+}: {
+  text: string
+  className: string
+  style?: { backgroundColor: string }
+  onCommit: (next: string) => void
+  onDeselect: () => void
+}) {
+  const [value, setValue] = useState(text)
+  const skipBlur = useRef(false)
+
+  useLayoutEffect(() => {
+    setValue(text)
+  }, [text])
+
+  return (
+    <input
+      value={value}
+      aria-label="Word"
+      size={Math.max(1, value.length)}
+      style={style}
+      className={cn(
+        wordClass,
+        'inline w-auto min-w-[1ch] bg-transparent outline-none ring-1 ring-white',
+        className,
+      )}
+      onChange={(event) => setValue(event.target.value)}
+      onBlur={() => {
+        if (skipBlur.current) {
+          skipBlur.current = false
+          return
+        }
+        onCommit(value)
+      }}
+      onKeyDown={(event) => {
+        event.stopPropagation()
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          event.currentTarget.blur()
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          skipBlur.current = true
+          setValue(text)
+          onDeselect()
+        }
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+    />
+  )
+}
+
+function LineComposer({
+  onCommit,
+  onFocus,
+}: {
+  onCommit: (text: string) => void
+  onFocus?: () => void
+}) {
+  const [value, setValue] = useState('')
+
+  function commit() {
+    const next = value.replace(/\s+/g, ' ').trim()
+    if (!next) return
+    onCommit(next)
+    setValue('')
+  }
+
+  return (
+    <input
+      value={value}
+      aria-label="Add words"
+      size={Math.max(1, value.length)}
+      className={cn(
+        wordClass,
+        'inline w-auto min-w-[8ch] bg-transparent caret-white outline-none',
+      )}
+      onFocus={onFocus}
+      onChange={(event) => setValue(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        event.stopPropagation()
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          commit()
+        }
+      }}
+    />
+  )
+}
 
 export function TalkActions({
   speaking,
@@ -248,7 +349,24 @@ export function TalkPanel({
     onText(result.next)
   }
 
-  const showEditor = editing || empty
+  function renameSelected(nextText: string) {
+    if (selectedStart == null) return
+    const word = pieces.find(
+      (piece) => piece.kind === 'word' && piece.word.start === selectedStart,
+    )
+    if (!word || word.kind !== 'word') return
+    if (nextText === word.word.text) return
+    const result = replaceWordText(text, word.word.start, word.word.end, nextText)
+    onText(result.next)
+    const nextPieces = annotateWords(result.next, defaults)
+    const nextWord =
+      nextPieces.find(
+        (piece) => piece.kind === 'word' && piece.word.start === result.wordStart,
+      ) ?? nextPieces.find((piece) => piece.kind === 'word')
+    setSelectedStart(nextWord && nextWord.kind === 'word' ? nextWord.word.start : null)
+  }
+
+  const showEditor = empty || editing
 
   return (
     <div className="flex flex-col gap-3">
@@ -257,12 +375,14 @@ export function TalkPanel({
         active={activePad}
         onSelect={(index, play) => {
           setSelectedStart(null)
+          setEditing(false)
           onSelectPad(index)
           const line = pads[index]?.text.trim()
           if (play && line) onSpeakWord(line)
         }}
         onClear={(index) => {
           setSelectedStart(null)
+          setEditing(false)
           onClearPad(index)
         }}
       />
@@ -294,6 +414,7 @@ export function TalkPanel({
             suppressContentEditableWarning
             tabIndex={0}
             className={cn(editorClass, 'cursor-text caret-white')}
+            onFocus={() => setEditing(true)}
             onInput={(e) => {
               if (!e.currentTarget.isContentEditable) return
               onText(e.currentTarget.innerText)
@@ -313,12 +434,6 @@ export function TalkPanel({
             role="group"
             aria-labelledby="talk-text-label"
             className={editorClass}
-            onDoubleClick={() => {
-              if (!live) {
-                setSelectedStart(null)
-                setEditing(true)
-              }
-            }}
           >
             {pieces.map((piece, i) => {
               if (piece.kind === 'text') {
@@ -331,25 +446,34 @@ export function TalkPanel({
                 highlight.start < word.end &&
                 highlight.end > word.start
               const on = selectedStart === word.start
+              const fill = marked ? wordFill(word.pitch, word.rate, word.language) : undefined
               return (
                 <span key={i} className="relative">
-                  <button
-                    type="button"
-                    title={wordSummary(word)}
-                    disabled={live}
-                    onClick={() =>
-                      setSelectedStart((current) => (current === word.start ? null : word.start))
-                    }
-                    style={marked ? wordFill(word.pitch, word.rate, word.language) : undefined}
-                    className={cn(
-                      'inline cursor-pointer rounded-[3px] px-0 text-left text-inherit',
-                      spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
-                      on && 'ring-1 ring-white',
-                      !marked && !spoken && 'hover:bg-neutral-800',
-                    )}
-                  >
-                    {word.text}
-                  </button>
+                  {on ? (
+                    <WordEditor
+                      text={word.text}
+                      style={fill}
+                      className={cn(spoken && 'outline outline-1 outline-offset-1 outline-neutral-400')}
+                      onCommit={renameSelected}
+                      onDeselect={() => setSelectedStart(null)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      title={wordSummary(word)}
+                      disabled={live}
+                      onClick={() => setSelectedStart(word.start)}
+                      style={fill}
+                      className={cn(
+                        wordClass,
+                        'cursor-pointer',
+                        spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
+                        !marked && !spoken && 'hover:bg-neutral-800',
+                      )}
+                    >
+                      {word.text}
+                    </button>
+                  )}
                   {on ? (
                     <WordMenu>
                       <CommandButtons
@@ -361,6 +485,13 @@ export function TalkPanel({
                 </span>
               )
             })}
+            {live ? null : (
+              <LineComposer
+                key={activePad}
+                onFocus={() => setSelectedStart(null)}
+                onCommit={(added) => onText(appendVisible(text, added))}
+              />
+            )}
           </div>
         )}
         {showEditor && empty ? (

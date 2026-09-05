@@ -1,6 +1,8 @@
 import {
   annotateWords,
+  appendVisible,
   inheritedBeforeWord,
+  replaceWordText,
   setWordVoice,
   wordSpeakSnippet,
   wordsFromPieces,
@@ -64,5 +66,32 @@ const gluedTight = "I'll{{pitch 220}}take you to the candy shop."
 if (visible(gluedTight) !== "I'll take you to the candy shop.") {
   throw new Error(`tight display: ${visible(gluedTight)}`)
 }
+
+const renamed = replaceWordText(text, take.start, take.end, 'took')
+if (visible(renamed.next) !== "I'll took you to the candy shop.") {
+  throw new Error(`rename display: ${visible(renamed.next)}`)
+}
+if (!renamed.next.includes('{{pitch 220}}')) throw new Error(`rename lost pitch: ${renamed.next}`)
+const took = wordsFromPieces(annotateWords(renamed.next, defaults)).find((w) => w.text === 'took')
+if (!took?.hasPitch || took.pitch !== 220) throw new Error(`took: ${JSON.stringify(took)}`)
+
+const split = replaceWordText(text, take.start, take.end, 'take extra')
+if (visible(split.next) !== "I'll take extra you to the candy shop.") {
+  throw new Error(`split display: ${visible(split.next)}`)
+}
+const extra = wordsFromPieces(annotateWords(split.next, defaults))
+if (extra.find((w) => w.text === 'take')?.pitch !== 220) throw new Error('split kept pitch on take')
+if (extra.find((w) => w.text === 'extra')?.hasPitch) throw new Error('split leaked pitch onto extra')
+
+const removed = replaceWordText(text, take.start, take.end, '')
+if (visible(removed.next) !== "I'll you to the candy shop.") {
+  throw new Error(`delete display: ${visible(removed.next)}`)
+}
+
+const appended = appendVisible("I'll {{pitch 220}}take", 'you home')
+if (visible(appended) !== "I'll take you home") {
+  throw new Error(`append display: ${visible(appended)}`)
+}
+if (!appended.includes('{{pitch 220}}')) throw new Error(`append lost pitch: ${appended}`)
 
 console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next, snippet }))

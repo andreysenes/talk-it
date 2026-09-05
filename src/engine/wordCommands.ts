@@ -159,6 +159,38 @@ function commandRegion(source: string, wordStart: number) {
   return { regionStart, wordStart }
 }
 
+export function visibleText(source: string, defaults: VoiceDefaults): string {
+  return annotateWords(source, defaults)
+    .map((piece) => (piece.kind === 'text' ? piece.text : piece.word.text))
+    .join('')
+}
+
+export function replaceWordText(
+  source: string,
+  wordStart: number,
+  wordEnd: number,
+  nextText: string,
+): { next: string; wordStart: number } {
+  const cleaned = nextText.replace(/\s+/g, ' ').trim()
+  const before = source.slice(0, wordStart)
+  const after = source.slice(wordEnd)
+  if (!cleaned) {
+    const lead = before.replace(/\s+$/, '')
+    const tail = after.replace(/^\s+/, '')
+    const next = lead && tail ? `${lead} ${tail}` : `${lead}${tail}`
+    return { next, wordStart: lead.length + (lead && tail ? 1 : 0) }
+  }
+  return { next: `${before}${cleaned}${after}`, wordStart }
+}
+
+export function appendVisible(source: string, addition: string): string {
+  const add = addition.replace(/\s+/g, ' ').trim()
+  if (!add) return source
+  const base = source.replace(/\s+$/, '')
+  if (!base) return add
+  return `${base} ${add}`
+}
+
 export function setWordVoice(
   source: string,
   wordStart: number,
