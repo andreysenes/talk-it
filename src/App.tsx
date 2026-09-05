@@ -147,9 +147,10 @@ export default function App() {
   }, [loop, setEngineLoop])
 
   useEffect(() => {
-    retune(settings)
+    retune(settings, text)
   }, [
     retune,
+    text,
     personality.id,
     pitch,
     speed,

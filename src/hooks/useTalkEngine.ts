@@ -372,11 +372,15 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   )
 
   const retune = useCallback(
-    (settings: TalkSettings) => {
+    (settings: TalkSettings, nextText?: string) => {
       latestSettingsRef.current = settings
+      if (typeof nextText === 'string' && nextText !== textRef.current) {
+        textRef.current = nextText
+        retuneDirtyRef.current = true
+      }
       const live = sourceRef.current != null || pendingRef.current != null || pausedRef.current
       if (!live || !textRef.current) return
-      if (settingsKey(settings) === appliedKeyRef.current) return
+      if (!retuneDirtyRef.current && settingsKey(settings) === appliedKeyRef.current) return
       // Coalesce slider drags: keep the current voice playing until the gesture settles.
       window.clearTimeout(retuneTimerRef.current)
       retuneTimerRef.current = window.setTimeout(() => {

@@ -629,16 +629,33 @@ export function TalkPanel({
                   ref={on ? selectedWordRef : undefined}
                   className="relative"
                 >
-                  {on && !live ? (
+                  {on ? (
                     [
-                      <WordEditor
-                        key="edit"
-                        text={word.text}
-                        style={fill}
-                        className={cn(word.muted && 'opacity-50')}
-                        onCommit={renameSelected}
-                        onDeselect={() => setSelectedStart(null)}
-                      />,
+                      live ? (
+                        <button
+                          key="word"
+                          type="button"
+                          title={wordSummary(word)}
+                          onClick={() => setSelectedStart(word.start)}
+                          style={fill}
+                          className={cn(
+                            wordClass,
+                            'cursor-pointer shadow-[inset_0_0_0_1px_#fff]',
+                            word.muted && 'opacity-50',
+                          )}
+                        >
+                          {word.text}
+                        </button>
+                      ) : (
+                        <WordEditor
+                          key="edit"
+                          text={word.text}
+                          style={fill}
+                          className={cn(word.muted && 'opacity-50')}
+                          onCommit={renameSelected}
+                          onDeselect={() => setSelectedStart(null)}
+                        />
+                      ),
                       <WordMenu key="menu">
                         <CommandButtons
                           state={word}
@@ -653,14 +670,12 @@ export function TalkPanel({
                     <button
                       type="button"
                       title={wordSummary(word)}
-                      disabled={live}
                       onClick={() => setSelectedStart(word.start)}
                       style={fill}
                       className={cn(
                         wordClass,
-                        'cursor-pointer disabled:opacity-100',
+                        'cursor-pointer',
                         spoken && 'shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)]',
-                        on && 'shadow-[inset_0_0_0_1px_#fff]',
                         word.muted && 'opacity-50',
                         !marked && !spoken && 'hover:bg-neutral-800',
                       )}
