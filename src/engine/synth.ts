@@ -35,7 +35,8 @@ export function pitchToHz(pitch: number): number {
 
 export function speedToRateMs(speed: number, quality: PitchQuality): number {
   const sung = quality === 'sung' ? 1.28 : 1
-  return clamp(BASE_RATE_MS * (BASE_SPEED / speed) * sung, 35, 420)
+  const safe = Number.isFinite(speed) && speed !== 0 ? speed : 1
+  return BASE_RATE_MS * (BASE_SPEED / Math.abs(safe)) * sung
 }
 
 function effortMix(
@@ -100,7 +101,7 @@ export function applyEmbeddedCommands(
       if (Number.isFinite(n)) next = { ...next, pitch: clamp(n, 50, 500) }
     } else if (cmd.startsWith('rate') || cmd.startsWith('speed')) {
       const n = Number(cmd.split(/\s+/)[1])
-      if (Number.isFinite(n)) next = { ...next, speed: clamp(n, 50, 400) }
+      if (Number.isFinite(n) && n !== 0) next = { ...next, speed: n }
     }
     return ' '
   })

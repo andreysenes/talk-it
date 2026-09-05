@@ -1,11 +1,6 @@
 import { Minus, Plus } from 'lucide-react'
 import { Button } from './ui/button'
-import {
-  PITCH_MAX,
-  PITCH_MIN,
-  SPEED_MAX,
-  SPEED_MIN,
-} from '../engine/personalities'
+import { PITCH_MAX, PITCH_MIN } from '../engine/personalities'
 
 function Stepper({
   label,
@@ -16,8 +11,8 @@ function Stepper({
 }: {
   label: string
   value: number
-  min: number
-  max: number
+  min?: number
+  max?: number
   onChange: (n: number) => void
 }) {
   return (
@@ -30,7 +25,10 @@ function Stepper({
         variant="outline"
         size="icon"
         className="talk-3d size-9 border-slate-800/15 bg-white"
-        onClick={() => onChange(Math.max(min, value - 1))}
+        onClick={() => {
+          const next = value - 1
+          onChange(min != null ? Math.max(min, next) : next)
+        }}
         aria-label={`Decrease ${label}`}
       >
         <Minus className="size-4" />
@@ -42,16 +40,23 @@ function Stepper({
         value={value}
         onChange={(e) => {
           const n = Number(e.target.value)
-          if (Number.isFinite(n)) onChange(Math.min(max, Math.max(min, n)))
+          if (!Number.isFinite(n)) return
+          let next = n
+          if (min != null) next = Math.max(min, next)
+          if (max != null) next = Math.min(max, next)
+          onChange(next)
         }}
-        className="h-10 w-16 rounded-md border-2 border-slate-800/15 bg-white text-center font-mono text-lg font-bold text-slate-800"
+        className="h-10 w-20 rounded-md border-2 border-slate-800/15 bg-white text-center font-mono text-lg font-bold text-slate-800"
       />
       <Button
         type="button"
         variant="outline"
         size="icon"
         className="talk-3d size-9 border-slate-800/15 bg-white"
-        onClick={() => onChange(Math.min(max, value + 1))}
+        onClick={() => {
+          const next = value + 1
+          onChange(max != null ? Math.min(max, next) : next)
+        }}
         aria-label={`Increase ${label}`}
       >
         <Plus className="size-4" />
@@ -80,13 +85,7 @@ export function VoiceSliders({
         max={PITCH_MAX}
         onChange={onPitch}
       />
-      <Stepper
-        label="Speed"
-        value={speed}
-        min={SPEED_MIN}
-        max={SPEED_MAX}
-        onChange={onSpeed}
-      />
+      <Stepper label="Speed" value={speed} onChange={onSpeed} />
     </div>
   )
 }

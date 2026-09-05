@@ -1,7 +1,5 @@
 export const PITCH_MIN = 50
 export const PITCH_MAX = 500
-export const SPEED_MIN = 50
-export const SPEED_MAX = 400
 
 export type PitchQuality = 'natural' | 'monotone' | 'sung'
 export type VocalEffort = 'normal' | 'breathy' | 'whispered'
