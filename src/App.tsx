@@ -5,13 +5,24 @@ import { PersonalityGrid } from './components/PersonalityGrid'
 import { TalkActions, TalkPanel } from './components/TalkPanel'
 import {
   PERSONALITIES,
-  voiceFromPersonality,
+  personalityById,
   type Language,
   type Personality,
   type PitchQuality,
   type VocalEffort,
 } from './engine/personalities'
-import { DEFAULT_PADS, normalizePads, type PhrasePad } from './engine/pads'
+import {
+  DEFAULT_PADS,
+  emptyPad,
+  normalizePads,
+  padsEqual,
+  snapshotPad,
+  stockPadVoice,
+  talkSettingsFromVoice,
+  voiceFromPad,
+  type PadVoice,
+  type PhrasePad,
+} from './engine/pads'
 import { useAudioOutputs } from './hooks/useAudioOutputs'
 import { useTalkEngine } from './hooks/useTalkEngine'
 
@@ -43,50 +54,73 @@ function loadSaved(): Partial<Saved> {
   }
 }
 
+function bootFromSaved(saved: Partial<Saved>) {
+  const pads = normalizePads(saved.pads)
+  let activePad = 0
+  if (typeof saved.activePad === 'number' && saved.activePad >= 0 && saved.activePad < pads.length) {
+    activePad = saved.activePad
+  } else {
+    const match = pads.findIndex((p) => p.text === (saved.text ?? ''))
+    if (match >= 0) activePad = match
+  }
+  const fallback = stockPadVoice(
+    PERSONALITIES.some((p) => p.id === saved.personalityId)
+      ? saved.personalityId!
+      : 'male',
+    {
+      language: saved.language === 'spanish' ? 'spanish' : 'english',
+      vintage: saved.vintage ?? true,
+    },
+  )
+  const migrated: PadVoice = {
+    ...fallback,
+    pitch: typeof saved.pitch === 'number' ? saved.pitch : fallback.pitch,
+    speed: typeof saved.speed === 'number' ? saved.speed : fallback.speed,
+    pitchQuality: saved.pitchQuality ?? fallback.pitchQuality,
+    vocalEffort: saved.vocalEffort ?? fallback.vocalEffort,
+    vibrato: typeof saved.vibrato === 'number' ? saved.vibrato : fallback.vibrato,
+    vibratoRate: typeof saved.vibratoRate === 'number' ? saved.vibratoRate : fallback.vibratoRate,
+    scale: typeof saved.scale === 'number' ? saved.scale : fallback.scale,
+  }
+  const voice = voiceFromPad(pads[activePad] ?? {}, migrated)
+  return {
+    pads,
+    activePad,
+    voice,
+    text: saved.text ?? pads[activePad]?.text ?? DEFAULT_PADS[0]!.text,
+    volume:
+      typeof saved.volume === 'number' && Number.isFinite(saved.volume)
+        ? Math.min(100, Math.max(0, saved.volume))
+        : 100,
+  }
+}
+
 export default function App() {
   const saved = useMemo(() => loadSaved(), [])
-  const initial =
-    PERSONALITIES.find((p) => p.id === saved.personalityId) ?? PERSONALITIES[0]
+  const boot = useMemo(() => bootFromSaved(saved), [saved])
 
-  const [personality, setPersonality] = useState<Personality>(initial)
-  const initialVoice = voiceFromPersonality(initial)
-  const [pitch, setPitch] = useState(saved.pitch ?? initialVoice.pitch)
-  const [speed, setSpeed] = useState(saved.speed ?? initialVoice.speed)
-  const [pitchQuality, setPitchQuality] = useState<PitchQuality>(
-    saved.pitchQuality ?? initialVoice.pitchQuality,
-  )
-  const [vocalEffort, setVocalEffort] = useState<VocalEffort>(
-    saved.vocalEffort ?? initialVoice.vocalEffort,
-  )
-  const [vibrato, setVibrato] = useState(saved.vibrato ?? initialVoice.vibrato)
-  const [vibratoRate, setVibratoRate] = useState(
-    saved.vibratoRate ?? initialVoice.vibratoRate,
-  )
-  const [scale, setScale] = useState(saved.scale ?? initialVoice.scale)
-  const [language, setLanguage] = useState<Language>(saved.language ?? 'english')
-  const [vintage, setVintage] = useState(saved.vintage ?? true)
-  const [pads, setPads] = useState(() => normalizePads(saved.pads))
-  const [activePad, setActivePad] = useState(() => {
-    const i = saved.activePad
-    if (typeof i === 'number' && i >= 0 && i < pads.length) return i
-    const match = pads.findIndex((p) => p.text === (saved.text ?? ''))
-    return match >= 0 ? match : 0
-  })
-  const [text, setText] = useState(
-    saved.text ?? pads[activePad]?.text ?? DEFAULT_PADS[0]!.text,
-  )
-  const [volume, setVolume] = useState(() => {
-    const n = saved.volume
-    return typeof n === 'number' && Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 100
-  })
+  const [personality, setPersonality] = useState(() => personalityById(boot.voice.personalityId))
+  const [pitch, setPitch] = useState(boot.voice.pitch)
+  const [speed, setSpeed] = useState(boot.voice.speed)
+  const [pitchQuality, setPitchQuality] = useState<PitchQuality>(boot.voice.pitchQuality)
+  const [vocalEffort, setVocalEffort] = useState<VocalEffort>(boot.voice.vocalEffort)
+  const [vibrato, setVibrato] = useState(boot.voice.vibrato)
+  const [vibratoRate, setVibratoRate] = useState(boot.voice.vibratoRate)
+  const [scale, setScale] = useState(boot.voice.scale)
+  const [language, setLanguage] = useState<Language>(boot.voice.language)
+  const [vintage, setVintage] = useState(boot.voice.vintage)
+  const [pads, setPads] = useState(boot.pads)
+  const [activePad, setActivePad] = useState(boot.activePad)
+  const [text, setText] = useState(boot.text)
+  const [volume, setVolume] = useState(boot.volume)
 
   const audio = useAudioOutputs()
   const { state, error, speak, stop, pause, resume, exportWav, unlock, highlight } =
     useTalkEngine(audio.sinkId, volume / 100)
   const midiNote = useRef<number | null>(null)
 
-  const settings = {
-    personality,
+  const voice: PadVoice = {
+    personalityId: personality.id,
     pitch,
     speed,
     pitchQuality,
@@ -97,10 +131,13 @@ export default function App() {
     vibratoRate,
     scale,
   }
+  const settings = talkSettingsFromVoice(voice)
   const settingsRef = useRef(settings)
   settingsRef.current = settings
   const textRef = useRef(text)
   textRef.current = text
+  const voiceRef = useRef(voice)
+  voiceRef.current = voice
 
   useEffect(() => {
     const payload: Saved = {
@@ -120,28 +157,81 @@ export default function App() {
       activePad,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [personality, pitch, speed, pitchQuality, vocalEffort, vibrato, vibratoRate, scale, language, vintage, text, volume, pads, activePad])
+  }, [
+    personality,
+    pitch,
+    speed,
+    pitchQuality,
+    vocalEffort,
+    vibrato,
+    vibratoRate,
+    scale,
+    language,
+    vintage,
+    text,
+    volume,
+    pads,
+    activePad,
+  ])
 
   useEffect(() => {
     setPads((prev) => {
       const current = prev[activePad]
-      if (!current || current.text === text) return prev
+      if (!current) return prev
+      const nextPad = snapshotPad(current, text, voiceRef.current)
+      if (padsEqual(current, nextPad)) return prev
       const next = [...prev]
-      next[activePad] = { ...current, text }
+      next[activePad] = nextPad
       return next
     })
-  }, [text, activePad])
+  }, [
+    text,
+    activePad,
+    personality,
+    pitch,
+    speed,
+    pitchQuality,
+    vocalEffort,
+    language,
+    vintage,
+    vibrato,
+    vibratoRate,
+    scale,
+  ])
+
+  function applyVoice(next: PadVoice) {
+    setPersonality(personalityById(next.personalityId))
+    setPitch(next.pitch)
+    setSpeed(next.speed)
+    setPitchQuality(next.pitchQuality)
+    setVocalEffort(next.vocalEffort)
+    setLanguage(next.language)
+    setVintage(next.vintage)
+    setVibrato(next.vibrato)
+    setVibratoRate(next.vibratoRate)
+    setScale(next.scale)
+  }
 
   function selectPersonality(p: Personality) {
-    const voice = voiceFromPersonality(p)
-    setPersonality(p)
-    setPitch(voice.pitch)
-    setSpeed(voice.speed)
-    setPitchQuality(voice.pitchQuality)
-    setVocalEffort(voice.vocalEffort)
-    setVibrato(voice.vibrato)
-    setVibratoRate(voice.vibratoRate)
-    setScale(voice.scale)
+    applyVoice({
+      ...stockPadVoice(p.id, { language, vintage }),
+      language,
+      vintage,
+    })
+  }
+
+  function selectPad(index: number, play?: boolean) {
+    const pad = pads[index]
+    if (!pad) return
+    const nextVoice = pad.personalityId
+      ? voiceFromPad(pad, voiceRef.current)
+      : voiceRef.current
+    setActivePad(index)
+    setText(pad.text)
+    applyVoice(nextVoice)
+    if (play && pad.text.trim()) {
+      void speak(pad.text, talkSettingsFromVoice(nextVoice))
+    }
   }
 
   return (
@@ -237,14 +327,11 @@ export default function App() {
             onResume={() => void resume()}
             pads={pads}
             activePad={activePad}
-            onSelectPad={(index) => {
-              setActivePad(index)
-              setText(pads[index]?.text ?? '')
-            }}
+            onSelectPad={selectPad}
             onClearPad={(index) => {
               setPads((prev) => {
                 const next = [...prev]
-                next[index] = { name: '', text: '' }
+                next[index] = emptyPad()
                 return next
               })
               if (index === activePad) setText('')

@@ -242,7 +242,7 @@ export function TalkPanel({
   onResume: () => void
   pads: PhrasePad[]
   activePad: number
-  onSelectPad: (index: number) => void
+  onSelectPad: (index: number, play?: boolean) => void
   onClearPad: (index: number) => void
 }) {
   const empty = !text.trim()
@@ -385,9 +385,7 @@ export function TalkPanel({
         onSelect={(index, play) => {
           setSelectedStart(null)
           setEditing(false)
-          onSelectPad(index)
-          const line = pads[index]?.text.trim()
-          if (play && line) onSpeakWord(line)
+          onSelectPad(index, play)
         }}
         onClear={(index) => {
           setSelectedStart(null)

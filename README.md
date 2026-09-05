@@ -72,7 +72,7 @@ The Talk It! names and the reverse-engineered OpenTalkIt pitch/speed/F0/voicing 
 
 Pitch `100` ≈ 110 Hz (adult male baseline), matching Talk It's percentage scale.
 
-Personality commands (pitch, rate, quality, voice, vibrato, scale) sit under the personality menu. Switching a personality reloads that voice's stock values.
+Personality commands (pitch, rate, quality, voice, vibrato, scale) sit under the personality menu. Switching a personality reloads that voice's stock values. Each pad stores its own line **and** those voice settings, so Big Robot can stay monotone while Twinkle stays sung.
 
 ## Embedded commands
 

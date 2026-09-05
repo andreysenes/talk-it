@@ -51,7 +51,7 @@ export function PadBank({
               type="button"
               title={
                 filled
-                  ? `${padCaption(pad, i)} · ${PAD_KEYS[i]} talks · right-click to clear`
+                  ? `${padCaption(pad, i)} · ${PAD_KEYS[i]} talks · voice is saved on this pad · right-click to clear`
                   : `Pad ${PAD_KEYS[i]} · press ${PAD_KEYS[i]} to talk after you save a line`
               }
               onClick={() => onSelect(i)}
