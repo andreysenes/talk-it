@@ -10,10 +10,10 @@ export function PersonalityGrid({
 }) {
   return (
     <div>
-      <h2 className="mb-2 font-display text-sm font-bold tracking-wide text-sky-950/80 uppercase">
+      <h2 className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
         Personality
       </h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         {PERSONALITIES.map((p) => {
           const selected = p.id === selectedId
           return (
@@ -22,10 +22,11 @@ export function PersonalityGrid({
               type="button"
               onClick={() => onSelect(p)}
               className={cn(
-                'talk-3d min-h-[52px] rounded-lg px-2 py-2 text-center text-[13px] leading-tight font-bold text-slate-800 sm:min-h-[58px] sm:text-sm',
-                selected && 'ring-2 ring-sky-700 ring-offset-2 ring-offset-sky-100',
+                'min-h-[48px] rounded-sm border px-2 py-2 text-center text-[13px] leading-tight font-medium transition-colors sm:min-h-[52px] sm:text-sm',
+                selected
+                  ? 'border-white bg-white text-black'
+                  : 'border-neutral-800 bg-transparent text-neutral-300 hover:border-neutral-500 hover:text-white',
               )}
-              style={{ background: p.color }}
               aria-pressed={selected}
             >
               {p.label}

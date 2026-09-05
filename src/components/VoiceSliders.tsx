@@ -16,14 +16,14 @@ function Stepper({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="w-14 font-display text-xs font-bold tracking-wide text-sky-950/80 uppercase">
+      <span className="w-14 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
         {label}
       </span>
       <Button
         type="button"
         variant="outline"
         size="icon"
-        className="talk-3d size-9 border-slate-800/15 bg-white"
+        className="size-8 border-neutral-700"
         onClick={() => {
           const next = value - 1
           onChange(min != null ? Math.max(min, next) : next)
@@ -45,13 +45,13 @@ function Stepper({
           if (max != null) next = Math.min(max, next)
           onChange(next)
         }}
-        className="h-10 w-20 rounded-md border-2 border-slate-800/15 bg-white text-center font-mono text-lg font-bold text-slate-800"
+        className="h-8 w-20 rounded-sm border border-neutral-700 bg-black text-center font-mono text-sm font-medium text-white outline-none focus:border-white"
       />
       <Button
         type="button"
         variant="outline"
         size="icon"
-        className="talk-3d size-9 border-slate-800/15 bg-white"
+        className="size-8 border-neutral-700"
         onClick={() => {
           const next = value + 1
           onChange(max != null ? Math.min(max, next) : next)

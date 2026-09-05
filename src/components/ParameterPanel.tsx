@@ -14,7 +14,7 @@ function RadioGroup<T extends string>({
 }) {
   return (
     <fieldset>
-      <legend className="mb-2 font-display text-xs font-bold tracking-wide text-sky-950/80 uppercase">
+      <legend className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
         {legend}
       </legend>
       <div className="flex flex-wrap gap-1.5">
@@ -26,10 +26,10 @@ function RadioGroup<T extends string>({
               type="button"
               onClick={() => onChange(opt.id)}
               className={cn(
-                'talk-3d rounded-full px-3 py-1.5 text-xs font-bold sm:text-sm',
+                'rounded-sm px-3 py-1.5 text-xs font-medium sm:text-sm',
                 on
-                  ? 'bg-sky-700 text-white'
-                  : 'bg-white/80 text-slate-700 hover:bg-white',
+                  ? 'bg-white text-black'
+                  : 'border border-neutral-800 text-neutral-400 hover:border-neutral-500 hover:text-white',
               )}
               aria-pressed={on}
             >
@@ -93,21 +93,23 @@ export function ParameterPanel({
         ]}
       />
       <fieldset>
-        <legend className="mb-2 font-display text-xs font-bold tracking-wide text-sky-950/80 uppercase">
+        <legend className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
           DAC
         </legend>
         <button
           type="button"
           onClick={() => onVintage(!vintage)}
           className={cn(
-            'talk-3d rounded-full px-3 py-1.5 text-xs font-bold sm:text-sm',
-            vintage ? 'bg-amber-500 text-white' : 'bg-white/80 text-slate-700',
+            'rounded-sm px-3 py-1.5 text-xs font-medium sm:text-sm',
+            vintage
+              ? 'bg-white text-black'
+              : 'border border-neutral-800 text-neutral-400 hover:border-neutral-500 hover:text-white',
           )}
           aria-pressed={vintage}
         >
           {vintage ? 'Classic 11 kHz' : 'Clean 44 kHz'}
         </button>
-        <p className="mt-1.5 text-[11px] leading-snug text-slate-600">
+        <p className="mt-1.5 text-[11px] leading-snug text-neutral-500">
           SoftVoice originally spoke at 11 kHz / 8-bit. Leave this on for the 1997 sound.
         </p>
       </fieldset>

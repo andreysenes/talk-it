@@ -89,29 +89,29 @@ export default function App() {
   }
 
   return (
-    <div className="cloud-sky min-h-svh px-3 py-4 sm:px-6 sm:py-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="shell min-h-svh px-3 py-6 sm:px-6 sm:py-10">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="font-display text-xs font-bold tracking-[0.2em] text-sky-900/70 uppercase">
+            <p className="text-[11px] font-medium tracking-[0.22em] text-neutral-500 uppercase">
               Microsoft Plus! for Kids · for Mac
             </p>
-            <h1 className="font-display text-4xl font-extrabold tracking-tight text-sky-950 sm:text-5xl">
+            <h1 className="mt-1 text-4xl font-medium tracking-tight text-white sm:text-5xl">
               Talk It!
             </h1>
-            <p className="mt-1 max-w-xl text-sm text-slate-700 sm:text-base">
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-500">
               A native formant recreation of OpenTalkIt / SoftVoice. Same 20 personalities,
               pitch, speed, sung mode, and WAV export — no Windows DLL, no virtual machine.
             </p>
           </div>
-          <div className="rounded-xl bg-white/70 px-3 py-2 text-xs text-slate-600 shadow-sm ring-1 ring-slate-800/10">
-            Voice: <span className="font-bold text-slate-800">{personality.label}</span>
-            <span className="mx-1.5 text-slate-400">·</span>
+          <div className="border border-neutral-800 px-3 py-2 text-xs text-neutral-500">
+            Voice: <span className="text-white">{personality.label}</span>
+            <span className="mx-1.5 text-neutral-700">·</span>
             {personality.engineName}
           </div>
         </header>
 
-        <main className="talk-panel flex flex-col gap-6 rounded-3xl p-4 sm:p-6">
+        <main className="talk-panel flex flex-col gap-8 rounded-sm p-4 sm:p-6">
           <PersonalityGrid
             selectedId={personality.id}
             onSelect={selectPersonality}
@@ -148,13 +148,13 @@ export default function App() {
           />
         </main>
 
-        <footer className="pb-4 text-xs leading-relaxed text-slate-600">
-          SoftVoice / <code>TIBASE32.DLL</code> is a 32-bit Windows binary, so the original
+        <footer className="pb-4 text-xs leading-relaxed text-neutral-600">
+          SoftVoice / <code className="text-neutral-400">TIBASE32.DLL</code> is a 32-bit Windows binary, so the original
           engine cannot run on modern macOS. This app synthesizes the same class of speech
           (parallel formant, Rosenberg glottal pulse) with Talk It! presets reverse-engineered
           by OpenTalkIt. It is not a bit-exact dump of the proprietary DLL. Engine:{' '}
           <a
-            className="underline decoration-sky-400 underline-offset-2"
+            className="text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:text-white"
             href="https://klatts.ch/"
             target="_blank"
             rel="noreferrer"

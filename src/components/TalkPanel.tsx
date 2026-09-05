@@ -84,7 +84,7 @@ export function TalkPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="font-display text-sm font-bold tracking-wide text-sky-950/80 uppercase" htmlFor="talk-text">
+      <label className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase" htmlFor="talk-text">
         What to say
       </label>
       <textarea
@@ -96,8 +96,8 @@ export function TalkPanel({
         placeholder="Type anything. Talk It! will speak it in the selected voice."
         rows={5}
         className={cn(
-          'w-full resize-y rounded-xl border-2 border-slate-800/15 bg-white/90 p-3 font-sans text-base text-slate-800 shadow-inner outline-none focus:border-sky-500',
-          error && 'border-red-400',
+          'w-full resize-y rounded-sm border border-neutral-800 bg-black p-3 font-sans text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-white',
+          error && 'border-white',
         )}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -107,7 +107,7 @@ export function TalkPanel({
         }}
       />
       {error ? (
-        <p className="text-sm font-semibold text-red-700" role="alert">
+        <p className="text-sm font-medium text-white" role="alert">
           {error}
         </p>
       ) : null}
@@ -156,7 +156,7 @@ export function TalkPanel({
           <button
             key={ex.label}
             type="button"
-            className="rounded-full border border-slate-800/10 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-white"
+            className="rounded-sm border border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-400 hover:border-white hover:text-white"
             onClick={() => onText(ex.text)}
             title={ex.hint}
           >

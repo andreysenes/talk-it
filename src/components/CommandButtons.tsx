@@ -19,24 +19,24 @@ function Chip({
   onToggle: () => void
 }) {
   return (
-    <div className="flex overflow-hidden rounded-full border border-slate-800/15 bg-white/90 shadow-sm">
+    <div className="flex overflow-hidden rounded-sm border border-neutral-800">
       <button
         type="button"
         onClick={onInsert}
-        className="px-3 py-1.5 text-left text-xs font-semibold text-slate-800 hover:bg-sky-50"
+        className="px-3 py-1.5 text-left text-xs font-medium text-neutral-200 hover:bg-neutral-900"
         title={`Insert ${token}`}
       >
-        <span className="mr-1.5 text-[10px] font-bold tracking-wide text-slate-400 uppercase">
+        <span className="mr-1.5 text-[10px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
           {label}
         </span>
-        <code className="font-mono text-[11px]">{token}</code>
+        <code className="font-mono text-[11px] text-neutral-300">{token}</code>
       </button>
       <button
         type="button"
         onClick={onToggle}
         className={cn(
-          'border-l border-slate-800/10 px-2 text-slate-600 hover:bg-sky-50',
-          open && 'bg-sky-100 text-sky-800',
+          'border-l border-neutral-800 px-2 text-neutral-500 hover:bg-neutral-900 hover:text-white',
+          open && 'bg-white text-black',
         )}
         aria-expanded={open}
         aria-label={`Configure ${label}`}
@@ -106,27 +106,29 @@ export function CommandButtons({
           onInsert={() => onInsert(rateToken)}
           onToggle={() => toggle('rate')}
         />
-        <span className="text-[11px] text-slate-500">⌘/Ctrl+Enter talks</span>
+        <span className="text-[11px] text-neutral-600">⌘/Ctrl+Enter talks</span>
       </div>
-      <p className="text-[11px] leading-relaxed text-slate-500">
+      <p className="text-[11px] leading-relaxed text-neutral-500">
         Commands have no close tag — they stick from that word until the next command of
         the same kind. Example:{' '}
-        <code className="rounded bg-white/80 px-1 font-mono text-[10px]">
+        <code className="font-mono text-[10px] text-neutral-400">
           {'{{spanish}}La {{rate 140}}cocaína {{rate 310}}no es buena para su salud.'}
         </code>
       </p>
 
       {open === 'language' && (
-        <div className="rounded-xl border border-slate-800/10 bg-white/80 p-3">
-          <p className="mb-2 text-[11px] font-bold tracking-wide text-slate-500 uppercase">
+        <div className="rounded-sm border border-neutral-800 bg-black p-3">
+          <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
             Language command
           </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className={cn(
-                'talk-3d rounded-full px-3 py-1.5 text-xs font-bold',
-                language === 'english' ? 'bg-sky-700 text-white' : 'bg-white text-slate-700',
+                'rounded-sm px-3 py-1.5 text-xs font-medium',
+                language === 'english'
+                  ? 'bg-white text-black'
+                  : 'border border-neutral-800 text-neutral-400 hover:text-white',
               )}
               onClick={() => setLanguage('english')}
             >
@@ -135,8 +137,10 @@ export function CommandButtons({
             <button
               type="button"
               className={cn(
-                'talk-3d rounded-full px-3 py-1.5 text-xs font-bold',
-                language === 'spanish' ? 'bg-sky-700 text-white' : 'bg-white text-slate-700',
+                'rounded-sm px-3 py-1.5 text-xs font-medium',
+                language === 'spanish'
+                  ? 'bg-white text-black'
+                  : 'border border-neutral-800 text-neutral-400 hover:text-white',
               )}
               onClick={() => setLanguage('spanish')}
             >
@@ -144,7 +148,7 @@ export function CommandButtons({
             </button>
             <button
               type="button"
-              className="talk-3d rounded-full bg-sky-600 px-3 py-1.5 text-xs font-bold text-white"
+              className="rounded-sm bg-white px-3 py-1.5 text-xs font-medium text-black"
               onClick={() => onInsert(langToken)}
             >
               Insert
@@ -190,10 +194,10 @@ function ValuePanel({
   onInsert: () => void
 }) {
   return (
-    <div className="rounded-xl border border-slate-800/10 bg-white/80 p-3">
+    <div className="rounded-sm border border-neutral-800 bg-black p-3">
       <label
         htmlFor={id}
-        className="mb-2 block text-[11px] font-bold tracking-wide text-slate-500 uppercase"
+        className="mb-2 block text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase"
       >
         {label}
       </label>
@@ -207,11 +211,11 @@ function ValuePanel({
             const n = Number(e.target.value)
             if (Number.isFinite(n)) onChange(n)
           }}
-          className="h-9 w-24 rounded-md border-2 border-slate-800/15 bg-white px-2 font-mono text-sm font-bold text-slate-800"
+          className="h-8 w-24 rounded-sm border border-neutral-700 bg-black px-2 font-mono text-sm font-medium text-white outline-none focus:border-white"
         />
         <button
           type="button"
-          className="talk-3d rounded-full bg-sky-600 px-3 py-1.5 text-xs font-bold text-white"
+          className="rounded-sm bg-white px-3 py-1.5 text-xs font-medium text-black"
           onClick={onInsert}
         >
           Insert
