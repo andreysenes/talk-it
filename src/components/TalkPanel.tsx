@@ -1,5 +1,5 @@
 import { Download, Square, Volume2 } from 'lucide-react'
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
 import { Button } from './ui/button'
 import { cn } from '../lib/utils'
@@ -50,6 +50,7 @@ export function TalkPanel({
   onTalk,
   onStop,
   onExport,
+  midi,
 }: {
   text: string
   onText: (v: string) => void
@@ -63,6 +64,7 @@ export function TalkPanel({
   onTalk: () => void
   onStop: () => void
   onExport: () => void
+  midi: ReactNode
 }) {
   const busy = speaking || rendering || exporting
   const empty = !text.trim()
@@ -118,7 +120,7 @@ export function TalkPanel({
         onInsert={insertCommand}
       />
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
           variant="talk"
@@ -149,6 +151,7 @@ export function TalkPanel({
           <Download className="size-5" />
           {exporting ? 'Exporting…' : 'Export WAV'}
         </Button>
+        {midi}
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">

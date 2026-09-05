@@ -99,32 +99,7 @@ export default function App() {
   return (
     <div className="shell min-h-svh px-3 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-        <header>
-          <h1 className="sr-only">Talk It!</h1>
-          <MidiBadge
-            audio={audio}
-            onPrimeAudio={() => unlock()}
-            onRateCc={setSpeed}
-            onNoteOn={(event) => {
-              midiNote.current = event.note
-              const nextPitch = Math.round(event.pitch)
-              setPitch(nextPitch)
-              setSpeed(event.speed)
-              void speak(textRef.current, {
-                ...settingsRef.current,
-                pitch: nextPitch,
-                speed: event.speed,
-              })
-            }}
-            onNoteOff={(event) => {
-              if (midiNote.current === event.note) {
-                midiNote.current = null
-                stop()
-              }
-            }}
-          />
-        </header>
-
+        <h1 className="sr-only">Talk It!</h1>
         <main className="talk-panel flex flex-col gap-8 rounded-sm p-4 sm:p-6">
           <PersonalityGrid
             selectedId={personality.id}
@@ -159,6 +134,30 @@ export default function App() {
             onTalk={() => void speak(text, settings)}
             onStop={stop}
             onExport={() => void exportWav(text, settings)}
+            midi={
+              <MidiBadge
+                audio={audio}
+                onPrimeAudio={() => unlock()}
+                onRateCc={setSpeed}
+                onNoteOn={(event) => {
+                  midiNote.current = event.note
+                  const nextPitch = Math.round(event.pitch)
+                  setPitch(nextPitch)
+                  setSpeed(event.speed)
+                  void speak(textRef.current, {
+                    ...settingsRef.current,
+                    pitch: nextPitch,
+                    speed: event.speed,
+                  })
+                }}
+                onNoteOff={(event) => {
+                  if (midiNote.current === event.note) {
+                    midiNote.current = null
+                    stop()
+                  }
+                }}
+              />
+            }
           />
         </main>
 

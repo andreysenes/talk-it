@@ -88,7 +88,7 @@ WAV export writes the synthesizer buffer directly (no loopback recorder like the
 
 ## MIDI in / audio back to a DAW
 
-The header **MIDI** badge (next to Voice) turns this page into a MIDI instrument the DAW can play.
+The **MIDI** control (next to Talk It!) turns this page into a MIDI instrument the DAW can play.
 
 A browser cannot register itself as a Core Audio / ASIO device. MIDI arrives through **Web MIDI**; audio returns through a **virtual output** the DAW already knows (BlackHole, Loopback, VB-Audio, etc.).
 
@@ -102,7 +102,7 @@ Talk It! **will not appear** under Link, Tempo & MIDI → Input Ports / Output P
 2. **Quit Live fully** and reopen it. You should now see **IAC Driver Bus 1** in Input Ports and Output Ports — still not a row named Talk It!.
 3. Input Ports: enable **Track** on that IAC bus. Output Ports: enable Track on a *second* IAC bus if you echo notes back (same bus = MIDI loop).
 4. MIDI track in the set → **MIDI To: IAC Driver Bus 1**.
-5. In Talk It!, open the MIDI badge → **Connect MIDI**. Set **MIDI in** to the same IAC port.
+5. In Talk It!, click **MIDI** next to Talk It! → **Connect MIDI**. Set **MIDI in** to the same IAC port.
 6. Audio back into Live is separate: install [BlackHole](https://existential.audio/blackhole/) or Loopback, pick it in Talk It! **Audio to DAW**, and record an audio track whose input is that device. That device shows up in Live’s **Audio** prefs, not the MIDI port list.
 
 ### What MIDI does

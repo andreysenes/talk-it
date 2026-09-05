@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { DawMidiHelp } from './DawMidiHelp'
+import { Button } from './ui/button'
 import { cn } from '../lib/utils'
 import { useMidi } from '../hooks/useMidi'
 import type { MidiNoteEvent } from '../engine/midi'
@@ -86,16 +87,17 @@ export function MidiBadge({
   }
 
   return (
-    <div className="relative flex-1" ref={rootRef}>
-      <button
+    <div className="relative" ref={rootRef}>
+      <Button
         type="button"
+        variant="export"
+        size="lg"
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => {
           setOpen((v) => !v)
           if (!open) void audio.unlockLabels()
         }}
-        className="flex h-full w-full items-center border border-neutral-800 px-3 py-2 text-left text-xs text-neutral-500 hover:border-neutral-500"
       >
         MIDI:{' '}
         <span className={midi.enabled ? 'text-white' : 'text-neutral-400'}>
@@ -107,12 +109,12 @@ export function MidiBadge({
             {secondary}
           </>
         ) : null}
-      </button>
+      </Button>
 
       {open && (
         <div
           role="dialog"
-          className="absolute top-full right-0 z-20 mt-2 max-h-[min(70vh,36rem)] w-[min(100vw-1.5rem,26rem)] overflow-y-auto border border-neutral-800 bg-[#0c0c0c] p-3"
+          className="absolute bottom-full left-0 z-20 mb-2 max-h-[min(70vh,36rem)] w-[min(100vw-1.5rem,26rem)] overflow-y-auto border border-neutral-800 bg-[#0c0c0c] p-3"
         >
           <p className="mb-3 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
             DAW · MIDI
