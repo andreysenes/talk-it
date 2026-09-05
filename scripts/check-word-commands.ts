@@ -157,4 +157,29 @@ if (visible(rewritten) !== "I'll grab you to the candy shop.") {
 const grab = wordsFromPieces(annotateWords(rewritten, defaults)).find((w) => w.text === 'grab')
 if (!grab?.hasPitch || grab.pitch !== 220) throw new Error(`grab: ${JSON.stringify(grab)}`)
 
+const withBreak = "I'll {{pitch 220}}take\nyou home."
+const keptBreak = rewriteVisibleText(withBreak, "I'll take\nyou home.", defaults)
+if (!keptBreak.includes('\n')) throw new Error(`lost newline: ${JSON.stringify(keptBreak)}`)
+if (visible(keptBreak) !== "I'll take\nyou home.") {
+  throw new Error(`break display: ${JSON.stringify(visible(keptBreak))}`)
+}
+if (!keptBreak.includes('{{pitch 220}}')) throw new Error(`break lost pitch: ${keptBreak}`)
+
+const lined = "hello\n{{pitch 90}}world"
+const pitched = setWordVoice(
+  lined,
+  lined.indexOf('world'),
+  { pitch: 180 },
+  inheritedBeforeWord(lined, lined.indexOf('world'), defaults),
+)
+if (!pitched.next.includes('\n')) throw new Error(`setVoice ate newline: ${JSON.stringify(pitched.next)}`)
+if (visible(pitched.next) !== 'hello\nworld') {
+  throw new Error(`setVoice display: ${JSON.stringify(visible(pitched.next))}`)
+}
+
+const afterCmd = "hello {{pitch 90}}\nworld"
+const piecesAfter = annotateWords(afterCmd, defaults)
+const afterVisible = piecesAfter.map((p) => (p.kind === 'text' ? p.text : p.word.text)).join('')
+if (!afterVisible.includes('\n')) throw new Error(`annotate dropped newline after cmd: ${JSON.stringify(afterVisible)}`)
+
 console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next, snippet, muted: muted.next }))

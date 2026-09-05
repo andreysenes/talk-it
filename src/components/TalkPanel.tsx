@@ -575,7 +575,23 @@ export function TalkPanel({
           >
             {pieces.map((piece, i) => {
               if (piece.kind === 'text') {
-                return <span key={`s-${i}`}>{piece.text}</span>
+                // Explicit <br> so newlines stay visible among inline word chips.
+                const chunks = piece.text.split(/(\n+)/)
+                return (
+                  <span key={`s-${i}`}>
+                    {chunks.map((chunk, j) =>
+                      /^\n+$/.test(chunk) ? (
+                        <span key={j}>
+                          {Array.from({ length: chunk.length }, (_, k) => (
+                            <br key={k} />
+                          ))}
+                        </span>
+                      ) : (
+                        <span key={j}>{chunk}</span>
+                      ),
+                    )}
+                  </span>
+                )
               }
               const word = piece.word
               const marked = wordIsMarked(word)

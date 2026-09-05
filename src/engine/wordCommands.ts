@@ -103,7 +103,8 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
       if (!chunk) continue
       if (/^\s+$/.test(chunk)) {
         const prev = pieces[pieces.length - 1]
-        if (skipLeadingSpace && prev?.kind === 'text') {
+        // Skip a space after {{commands}}, but never drop newlines.
+        if (skipLeadingSpace && prev?.kind === 'text' && !/\n/.test(chunk)) {
           skipLeadingSpace = false
           continue
         }
@@ -158,7 +159,8 @@ export function wordIsMarked(word: WordVoice): boolean {
 
 function commandRegion(source: string, wordStart: number) {
   let i = wordStart
-  while (i > 0 && /\s/.test(source[i - 1] ?? '')) i -= 1
+  // Only skip spaces/tabs before the word — never newlines.
+  while (i > 0 && /[ \t]/.test(source[i - 1] ?? '')) i -= 1
   let regionStart = i
   let head = source.slice(0, i)
   while (CMD_AT_END.test(head)) {
@@ -167,7 +169,7 @@ function commandRegion(source: string, wordStart: number) {
     regionStart = head.length - match[0].length
     head = head.slice(0, regionStart)
   }
-  while (regionStart > 0 && /\s/.test(source[regionStart - 1] ?? '')) {
+  while (regionStart > 0 && /[ \t]/.test(source[regionStart - 1] ?? '')) {
     regionStart -= 1
   }
   return { regionStart, wordStart }
@@ -185,24 +187,26 @@ export function rewriteVisibleText(
   nextVisible: string,
   defaults: VoiceDefaults,
 ): string {
-  const cleaned = nextVisible.replace(/\s+/g, ' ').trim()
-  if (!cleaned) return ''
+  const normalized = nextVisible.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  if (!normalized.replace(/\s/g, '')) return ''
+
   const oldWords = wordsFromPieces(annotateWords(source, defaults))
-  const nextWords = cleaned.split(' ')
-  const parts: string[] = []
-  for (let i = 0; i < nextWords.length; i++) {
-    const token = nextWords[i]!
-    const old = oldWords[i]
-    if (!old) {
-      parts.push(token)
-      continue
-    }
-    const { regionStart, wordStart } = commandRegion(source, old.start)
-    const region = source.slice(regionStart, wordStart)
-    const insert = serializeBag(bagFromRegion(region), regionIsMuted(region))
-    parts.push(insert ? `${insert} ${token}` : token)
-  }
-  return parts.join(' ')
+  let wordIndex = 0
+  const lines = normalized.split('\n').map((line) => {
+    const words = line.replace(/[^\S\n]+/g, ' ').trim().split(' ').filter(Boolean)
+    if (!words.length) return ''
+    return words
+      .map((token) => {
+        const old = oldWords[wordIndex++]
+        if (!old) return token
+        const { regionStart, wordStart } = commandRegion(source, old.start)
+        const region = source.slice(regionStart, wordStart)
+        const insert = serializeBag(bagFromRegion(region), regionIsMuted(region))
+        return insert ? `${insert} ${token}` : token
+      })
+      .join(' ')
+  })
+  return lines.join('\n')
 }
 
 export function replaceWordText(
@@ -215,10 +219,14 @@ export function replaceWordText(
   const before = source.slice(0, wordStart)
   const after = source.slice(wordEnd)
   if (!cleaned) {
-    const lead = before.replace(/\s+$/, '')
-    const tail = after.replace(/^\s+/, '')
-    const next = lead && tail ? `${lead} ${tail}` : `${lead}${tail}`
-    return { next, wordStart: lead.length + (lead && tail ? 1 : 0) }
+    const lead = before.replace(/[ \t]+$/, '')
+    const tail = after.replace(/^[ \t]+/, '')
+    if (!lead) return { next: tail.replace(/^\n+/, ''), wordStart: 0 }
+    if (!tail) return { next: lead.replace(/\n+$/, ''), wordStart: lead.replace(/\n+$/, '').length }
+    if (/\n$/.test(lead) || /^\n/.test(tail)) {
+      return { next: `${lead.replace(/\n+$/, '\n')}${tail.replace(/^\n+/, '')}`, wordStart: lead.replace(/\n+$/, '\n').length }
+    }
+    return { next: `${lead} ${tail}`, wordStart: lead.length + 1 }
   }
   return { next: `${before}${cleaned}${after}`, wordStart }
 }
@@ -277,12 +285,15 @@ function spliceRegion(
 ): { next: string; wordStart: number } {
   const before = source.slice(0, regionStart)
   const rest = source.slice(wordStart)
+  const gapBefore = before.length > 0 && !/\s$/.test(before) && (insert || Boolean(rest))
+  const gapAfter =
+    !insert && before.length > 0 && rest.length > 0 && !/\s$/.test(before) && !/^\s/.test(rest)
   const next = insert
-    ? `${before}${before ? ' ' : ''}${insert}${rest}`
-    : `${before}${before && rest ? ' ' : ''}${rest}`
+    ? `${before}${gapBefore ? ' ' : ''}${insert}${rest}`
+    : `${before}${gapAfter ? ' ' : ''}${rest}`
   const nextStart = insert
-    ? before.length + (before ? 1 : 0) + insert.length
-    : before.length + (before && rest ? 1 : 0)
+    ? before.length + (gapBefore ? 1 : 0) + insert.length
+    : before.length + (gapAfter ? 1 : 0)
   return { next, wordStart: nextStart }
 }
 
