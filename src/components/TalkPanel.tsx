@@ -280,6 +280,7 @@ export function TalkPanel({
   paused,
   error,
   highlight,
+  progress,
   onTalk,
   onSpeakWord,
   onPause,
@@ -306,6 +307,7 @@ export function TalkPanel({
   paused: boolean
   error: string | null
   highlight: { start: number; end: number } | null
+  progress: number
   onTalk: () => void
   onSpeakWord: (snippet: string) => void
   onPause: () => void
@@ -524,6 +526,7 @@ export function TalkPanel({
       <PadBank
         pads={pads}
         active={activePad}
+        progress={live ? progress : 0}
         midi={midi}
         onPadDown={(index) => {
           setSelectedStart(null)

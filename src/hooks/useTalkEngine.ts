@@ -68,6 +68,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   const [error, setError] = useState<string | null>(null)
   const [highlight, setHighlight] = useState<{ start: number; end: number } | null>(null)
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null)
+  const [progress, setProgress] = useState(0)
+  const progressRef = useRef(0)
 
   const stopHighlight = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
@@ -106,6 +108,14 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         const elapsed = readElapsed()
         elapsedMsRef.current = elapsed
         syncHighlight(elapsed, wordsRef.current)
+        const dur = durationMsRef.current
+        const next = dur > 0 ? Math.min(1, elapsed / dur) : 0
+        // Quantize to ~1% so React doesn't re-render every frame.
+        const rounded = Math.round(next * 100) / 100
+        if (rounded !== progressRef.current) {
+          progressRef.current = rounded
+          setProgress(rounded)
+        }
         rafRef.current = requestAnimationFrame(loop)
       }
       rafRef.current = requestAnimationFrame(loop)
@@ -135,6 +145,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     wordsRef.current = []
     textRef.current = ''
     appliedKeyRef.current = ''
+    progressRef.current = 0
+    setProgress(0)
     setHighlight(null)
     setState('idle')
     const ctx = ctxRef.current
@@ -223,6 +235,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         wordsRef.current = []
         elapsedMsRef.current = 0
         pendingRef.current = null
+        progressRef.current = 0
+        setProgress(0)
         setHighlight(null)
         setState('idle')
       }
@@ -536,6 +550,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     exportWav,
     unlock,
     highlight,
+    progress,
     analyser,
     setLoop,
     releaseHold,

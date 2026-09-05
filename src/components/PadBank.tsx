@@ -13,6 +13,7 @@ import { midiNoteName } from '../engine/midi'
 export function PadBank({
   pads,
   active,
+  progress = 0,
   onPadDown,
   onPadUp,
   onClear,
@@ -20,6 +21,8 @@ export function PadBank({
 }: {
   pads: PhrasePad[]
   active: number
+  /** 0–1 playback fill for the active pad while speaking/paused. */
+  progress?: number
   onPadDown: (index: number) => void
   onPadUp: (index: number) => void
   onClear: (index: number) => void
@@ -108,6 +111,7 @@ export function PadBank({
         {pads.map((pad, i) => {
           const on = i === active
           const filled = Boolean(pad.text.trim() || pad.name.trim())
+          const playFill = on ? Math.min(1, Math.max(0, progress)) : 0
           return (
             <button
               key={i}
@@ -125,7 +129,7 @@ export function PadBank({
                 onClear(i)
               }}
               className={cn(
-                'group relative min-h-14 touch-none rounded-sm border px-2 py-1.5 text-left select-none',
+                'group relative min-h-14 overflow-hidden touch-none rounded-sm border px-2 py-1.5 text-left select-none',
                 on && 'border-white bg-white text-black',
                 !on && filled && 'border-neutral-700 text-neutral-200 hover:border-white',
                 !on &&
@@ -133,9 +137,19 @@ export function PadBank({
                   'border-dashed border-neutral-800 text-neutral-600 hover:border-neutral-500',
               )}
             >
+              {playFill > 0 ? (
+                <span
+                  aria-hidden
+                  className={cn(
+                    'pointer-events-none absolute inset-y-0 left-0',
+                    on ? 'bg-neutral-300' : 'bg-white/15',
+                  )}
+                  style={{ width: `${playFill * 100}%` }}
+                />
+              ) : null}
               <span
                 className={cn(
-                  'block font-mono text-[10px] tracking-wider',
+                  'relative block font-mono text-[10px] tracking-wider',
                   on ? 'text-neutral-500' : 'text-neutral-600',
                 )}
               >
@@ -144,13 +158,13 @@ export function PadBank({
                   {midiNoteName(midiNoteForPad(i))}
                 </span>
               </span>
-              <span className="mt-0.5 block truncate text-xs font-medium">
+              <span className="relative mt-0.5 block truncate text-xs font-medium">
                 {padCaption(pad, i)}
               </span>
               {pad.loop ? (
                 <Repeat
                   className={cn(
-                    'pointer-events-none absolute right-1 bottom-1 size-3',
+                    'pointer-events-none absolute right-1 bottom-1 z-10 size-3',
                     on ? 'text-neutral-500' : 'text-neutral-600',
                   )}
                   aria-hidden
@@ -162,7 +176,7 @@ export function PadBank({
                   tabIndex={0}
                   aria-label={`Clear pad ${PAD_KEYS[i]}`}
                   className={cn(
-                    'absolute top-1 right-1 flex size-4 items-center justify-center rounded-sm text-sm leading-none',
+                    'absolute top-1 right-1 z-10 flex size-4 items-center justify-center rounded-sm text-sm leading-none',
                     on
                       ? 'text-neutral-400 hover:bg-black/10 hover:text-black'
                       : 'text-neutral-600 hover:bg-white/10 hover:text-white',
