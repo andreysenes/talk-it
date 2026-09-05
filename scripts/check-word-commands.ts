@@ -2,6 +2,7 @@ import {
   annotateWords,
   inheritedBeforeWord,
   setWordVoice,
+  wordSpeakSnippet,
   wordsFromPieces,
 } from '../src/engine/wordCommands.ts'
 import type { VoiceState } from '../src/engine/commands.ts'
@@ -48,4 +49,9 @@ if (!scaled.next.includes('{{vibrato 4.0}}') && !scaled.next.includes('{{vibrato
   throw new Error(scaled.next)
 }
 
-console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next }))
+const snippet = wordSpeakSnippet(text, take.start, take.end)
+if (!snippet.includes('{{pitch 220}}')) throw new Error(`snippet cmds: ${snippet}`)
+if (!snippet.includes('take')) throw new Error(`snippet word: ${snippet}`)
+if (/I'll/.test(snippet)) throw new Error(`snippet too much: ${snippet}`)
+
+console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next, snippet }))

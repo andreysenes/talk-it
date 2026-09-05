@@ -159,6 +159,18 @@ export function setWordVoice(
   }
 }
 
+export function wordSpeakSnippet(source: string, wordStart: number, wordEnd: number): string {
+  const parts = parseEmbedded(source)
+  const cmds: string[] = []
+  for (const part of parts) {
+    if (part.end > wordStart) break
+    if (part.kind === 'cmd') cmds.push(source.slice(part.start, part.end))
+  }
+  const word = source.slice(wordStart, wordEnd).trim()
+  if (!word) return cmds.join(' ')
+  return cmds.length ? `${cmds.join(' ')} ${word}` : word
+}
+
 export function inheritedBeforeWord(
   source: string,
   wordStart: number,

@@ -12,6 +12,7 @@ import {
   setWordVoice,
   wordFill,
   wordIsMarked,
+  wordSpeakSnippet,
   wordSummary,
 } from '../engine/wordCommands'
 import type { VoicePatch } from '../engine/commands'
@@ -120,6 +121,7 @@ export function TalkPanel({
   error,
   highlight,
   onTalk,
+  onSpeakWord,
 }: {
   text: string
   onText: (v: string) => void
@@ -133,6 +135,7 @@ export function TalkPanel({
   error: string | null
   highlight: { start: number; end: number } | null
   onTalk: () => void
+  onSpeakWord: (snippet: string) => void
 }) {
   const empty = !text.trim()
   const [editing, setEditing] = useState(false)
@@ -179,6 +182,31 @@ export function TalkPanel({
     document.addEventListener('pointerdown', onPointerDown)
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [selectedStart])
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== ' ' && event.code !== 'Space') return
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
+      if (editing || empty || selectedStart == null) return
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
+      ) {
+        return
+      }
+      const word = pieces.find(
+        (piece) => piece.kind === 'word' && piece.word.start === selectedStart,
+      )
+      if (!word || word.kind !== 'word') return
+      event.preventDefault()
+      event.stopPropagation()
+      onSpeakWord(wordSpeakSnippet(text, word.word.start, word.word.end))
+    }
+
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => document.removeEventListener('keydown', onKeyDown, true)
+  }, [editing, empty, selectedStart, pieces, text, onSpeakWord])
 
   function applyToSelected(patch: VoicePatch) {
     if (selectedStart == null) return

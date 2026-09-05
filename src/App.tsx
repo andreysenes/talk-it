@@ -178,6 +178,7 @@ export default function App() {
             error={error}
             highlight={highlight}
             onTalk={() => void speak(text, settings)}
+            onSpeakWord={(snippet) => void speak(snippet, settings)}
           />
         </main>
       </div>
