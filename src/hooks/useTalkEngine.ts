@@ -44,6 +44,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   const latestSettingsRef = useRef<TalkSettings | null>(null)
   const volumeRef = useRef(volume)
   volumeRef.current = volume
+  const durationMsRef = useRef(0)
+  const loopRef = useRef(false)
   const pausedRef = useRef(false)
   const playIdRef = useRef(0)
   const retuneBusyRef = useRef(false)
@@ -65,10 +67,16 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   }, [])
 
   const readElapsed = useCallback(() => {
-    if (pausedRef.current) return elapsedMsRef.current
-    const ctx = ctxRef.current
-    if (!ctx || !sourceRef.current) return elapsedMsRef.current
-    return Math.max(0, (ctx.currentTime - startedAtRef.current) * 1000)
+    let elapsed: number
+    if (pausedRef.current) elapsed = elapsedMsRef.current
+    else {
+      const ctx = ctxRef.current
+      if (!ctx || !sourceRef.current) elapsed = elapsedMsRef.current
+      else elapsed = Math.max(0, (ctx.currentTime - startedAtRef.current) * 1000)
+    }
+    const dur = durationMsRef.current
+    if (loopRef.current && dur > 0) return elapsed % dur
+    return elapsed
   }, [])
 
   const syncHighlight = useCallback((elapsed: number, words: SpokenWord[]) => {
@@ -81,18 +89,18 @@ export function useTalkEngine(sinkId = '', volume = 1) {
   }, [])
 
   const tickHighlight = useCallback(
-    (source: AudioBufferSourceNode, ctx: AudioContext) => {
+    (source: AudioBufferSourceNode) => {
       stopHighlight()
       const loop = () => {
         if (sourceRef.current !== source) return
-        const elapsed = (ctx.currentTime - startedAtRef.current) * 1000
+        const elapsed = readElapsed()
         elapsedMsRef.current = elapsed
         syncHighlight(elapsed, wordsRef.current)
         rafRef.current = requestAnimationFrame(loop)
       }
       rafRef.current = requestAnimationFrame(loop)
     },
-    [stopHighlight, syncHighlight],
+    [readElapsed, stopHighlight, syncHighlight],
   )
 
   const stop = useCallback(() => {
@@ -184,6 +192,8 @@ export function useTalkEngine(sinkId = '', volume = 1) {
 
       const source = ctx.createBufferSource()
       source.buffer = buffer
+      source.loop = loopRef.current
+      durationMsRef.current = buffer.duration * 1000
       const fade = ctx.createGain()
       source.connect(fade)
       fade.connect(tap)
@@ -218,7 +228,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       fadeGainRef.current = fade
       startedAtRef.current = now - clamped
       pendingRef.current = null
-      tickHighlight(source, ctx)
+      tickHighlight(source)
       return source
     },
     [stopHighlight, syncHighlight, tickHighlight],
@@ -248,7 +258,13 @@ export function useTalkEngine(sinkId = '', volume = 1) {
         const utterance = renderUtterance(text, snap)
         if (playId !== playIdRef.current) return
         if (!utterance.samples.length) break
-        const offset = mapPlayOffsetSec(elapsed, oldWords, utterance.words)
+        const newDur = utterance.samples.length / utterance.sampleRate
+        let offset: number | null
+        if (loopRef.current && durationMsRef.current > 0) {
+          offset = (elapsed / durationMsRef.current) * newDur
+        } else {
+          offset = mapPlayOffsetSec(elapsed, oldWords, utterance.words)
+        }
         if (offset == null) {
           stop()
           return
@@ -356,7 +372,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
       armSource(ctx, pending.buffer, pending.offset, pending.words)
     } else if (sourceRef.current) {
       startedAtRef.current = ctx.currentTime - elapsedMsRef.current / 1000
-      tickHighlight(sourceRef.current, ctx)
+      tickHighlight(sourceRef.current)
     } else {
       setState('idle')
       return
@@ -412,6 +428,11 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     await ensureContext()
   }, [ensureContext])
 
+  const setLoop = useCallback((on: boolean) => {
+    loopRef.current = on
+    if (sourceRef.current) sourceRef.current.loop = on
+  }, [])
+
   return {
     state,
     error,
@@ -424,6 +445,7 @@ export function useTalkEngine(sinkId = '', volume = 1) {
     unlock,
     highlight,
     analyser,
+    setLoop,
     setError,
   }
 }

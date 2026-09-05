@@ -49,6 +49,13 @@ if (restored.personalityId !== 'mellowMale' || restored.pitch !== 280) {
   throw new Error(`restore: ${JSON.stringify(restored)}`)
 }
 
+const looped = snapshotPad(big, big.text, { ...stockPadVoice('colossus'), loop: true })
+if (!looped.loop) throw new Error('snapshot loop')
+if (voiceFromPad(looped, stockPadVoice('male')).loop !== true) {
+  throw new Error('restore loop')
+}
+if (voiceFromPad(big, stockPadVoice('male')).loop) throw new Error('default loop off')
+
 const settings = talkSettingsFromVoice(restored)
 if (settings.personality.label !== 'Singing Girl') throw new Error(settings.personality.label)
 if (settings.language !== 'spanish' || settings.pitchQuality !== 'sung') {

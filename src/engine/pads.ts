@@ -42,6 +42,7 @@ export type PadVoice = {
   vibrato: number
   vibratoRate: number
   scale: number
+  loop: boolean
 }
 
 export type PhrasePad = {
@@ -104,6 +105,7 @@ export function stockPadVoice(
     ...voice,
     language: extras.language ?? 'english',
     vintage: extras.vintage ?? true,
+    loop: false,
   }
 }
 
@@ -126,6 +128,7 @@ export function voiceFromPad(pad: Partial<PhrasePad>, fallback: PadVoice): PadVo
     vibrato: num(pad.vibrato, stock.vibrato, 0, 16),
     vibratoRate: num(pad.vibratoRate, stock.vibratoRate, 0.5, 12),
     scale: num(pad.scale, stock.scale, 0.4, 1.8),
+    loop: pad.loop === true,
   }
 }
 
@@ -161,7 +164,8 @@ export function padsEqual(a: PhrasePad, b: PhrasePad): boolean {
     a.vintage === b.vintage &&
     a.vibrato === b.vibrato &&
     a.vibratoRate === b.vibratoRate &&
-    a.scale === b.scale
+    a.scale === b.scale &&
+    Boolean(a.loop) === Boolean(b.loop)
   )
 }
 

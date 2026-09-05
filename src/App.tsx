@@ -108,6 +108,7 @@ export default function App() {
   const [vibrato, setVibrato] = useState(boot.voice.vibrato)
   const [vibratoRate, setVibratoRate] = useState(boot.voice.vibratoRate)
   const [scale, setScale] = useState(boot.voice.scale)
+  const [loop, setLoop] = useState(boot.voice.loop)
   const [language, setLanguage] = useState<Language>(boot.voice.language)
   const [vintage, setVintage] = useState(boot.voice.vintage)
   const [pads, setPads] = useState(boot.pads)
@@ -116,7 +117,7 @@ export default function App() {
   const [volume, setVolume] = useState(boot.volume)
 
   const audio = useAudioOutputs()
-  const { state, error, speak, stop, pause, resume, retune, exportWav, unlock, highlight, analyser } =
+  const { state, error, speak, stop, pause, resume, retune, exportWav, unlock, highlight, analyser, setLoop: setEngineLoop } =
     useTalkEngine(audio.sinkId, volume / 100)
   const midiNote = useRef<number | null>(null)
 
@@ -131,6 +132,7 @@ export default function App() {
     vibrato,
     vibratoRate,
     scale,
+    loop,
   }
   const settings = talkSettingsFromVoice(voice)
   const settingsRef = useRef(settings)
@@ -139,6 +141,10 @@ export default function App() {
   textRef.current = text
   const voiceRef = useRef(voice)
   voiceRef.current = voice
+
+  useEffect(() => {
+    setEngineLoop(loop)
+  }, [loop, setEngineLoop])
 
   useEffect(() => {
     retune(settings)
@@ -189,6 +195,7 @@ export default function App() {
     volume,
     pads,
     activePad,
+    loop,
   ])
 
   useEffect(() => {
@@ -214,6 +221,7 @@ export default function App() {
     vibrato,
     vibratoRate,
     scale,
+    loop,
   ])
 
   function applyVoice(next: PadVoice) {
@@ -227,6 +235,7 @@ export default function App() {
     setVibrato(next.vibrato)
     setVibratoRate(next.vibratoRate)
     setScale(next.scale)
+    setLoop(next.loop)
   }
 
   function selectPersonality(p: Personality) {
@@ -234,6 +243,7 @@ export default function App() {
       ...stockPadVoice(p.id, { language, vintage }),
       language,
       vintage,
+      loop,
     })
   }
 
@@ -333,6 +343,12 @@ export default function App() {
               else void speak(text, settings)
             }}
             onStop={stop}
+            looping={loop}
+            onLoop={() => {
+              const next = !loop
+              setLoop(next)
+              setEngineLoop(next)
+            }}
             onExport={() => void exportWav(text, settings)}
             volume={volume}
             onVolume={setVolume}

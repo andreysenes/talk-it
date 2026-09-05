@@ -1,3 +1,4 @@
+import { Repeat } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 import { cn } from '../lib/utils'
 import { PAD_KEYS, midiNoteForPad, padCaption, padIndexFromKey, type PhrasePad } from '../engine/pads'
@@ -86,6 +87,15 @@ export function PadBank({
               <span className="mt-0.5 block truncate text-xs font-medium">
                 {padCaption(pad, i)}
               </span>
+              {pad.loop ? (
+                <Repeat
+                  className={cn(
+                    'absolute right-1 bottom-1 size-3',
+                    on ? 'text-neutral-500' : 'text-neutral-600',
+                  )}
+                  aria-hidden
+                />
+              ) : null}
               {filled ? (
                 <span
                   role="button"

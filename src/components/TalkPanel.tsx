@@ -1,4 +1,4 @@
-import { Download, Pause, Play, Square } from 'lucide-react'
+import { Download, Pause, Play, Repeat, Square } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CommandButtons } from './CommandButtons'
 import { PadBank } from './PadBank'
@@ -157,6 +157,8 @@ export function TalkActions({
   onPlay,
   onStop,
   onExport,
+  looping,
+  onLoop,
   volume,
   onVolume,
   analyser,
@@ -169,6 +171,8 @@ export function TalkActions({
   onPlay: () => void
   onStop: () => void
   onExport: () => void
+  looping: boolean
+  onLoop: () => void
   volume: number
   onVolume: (n: number) => void
   analyser: AnalyserNode | null
@@ -196,6 +200,16 @@ export function TalkActions({
         aria-label="Stop"
       >
         <Square className="size-3.5 fill-current" />
+      </Button>
+      <Button
+        type="button"
+        variant={looping ? 'talk' : 'export'}
+        size="iconLg"
+        aria-pressed={looping}
+        aria-label={looping ? 'Disable loop' : 'Loop'}
+        onClick={onLoop}
+      >
+        <Repeat className="size-4" />
       </Button>
       <Button
         type="button"
