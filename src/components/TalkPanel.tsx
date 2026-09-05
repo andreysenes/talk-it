@@ -11,7 +11,6 @@ import {
   setWordVoice,
   wordFill,
   wordSummary,
-  type WordVoice,
 } from '../engine/wordCommands'
 
 const EXAMPLES = [
@@ -36,6 +35,27 @@ const EXAMPLES = [
     hint: 'Try Child + Sung',
   },
 ]
+
+function WordMenu({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [alignRight, setAlignRight] = useState(false)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    setAlignRight(rect.right > window.innerWidth - 16)
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      className={cn('absolute top-full z-40 mt-1', alignRight ? 'right-0' : 'left-0')}
+    >
+      {children}
+    </div>
+  )
+}
 
 const editorClass =
   'w-full min-h-[1.25em] px-0 py-1 font-sans text-2xl leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:text-3xl'
@@ -115,10 +135,6 @@ export function TalkPanel({
     [language, pitch, speed],
   )
   const pieces = useMemo(() => annotateWords(text, defaults), [text, defaults])
-  const selected = pieces.find(
-    (p): p is { kind: 'word'; word: WordVoice } =>
-      p.kind === 'word' && p.word.start === selectedStart,
-  )?.word
 
   useLayoutEffect(() => {
     if (!editing) return
@@ -224,24 +240,37 @@ export function TalkPanel({
                 highlight.end > word.start
               const on = selectedStart === word.start
               return (
-                <button
-                  key={word.start}
-                  type="button"
-                  title={wordSummary(word)}
-                  disabled={speaking}
-                  onClick={() =>
-                    setSelectedStart((current) => (current === word.start ? null : word.start))
-                  }
-                  style={marked ? wordFill(word.pitch, word.rate, word.language) : undefined}
-                  className={cn(
-                    'cursor-pointer rounded-[3px] px-0.5 text-left text-inherit',
-                    spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
-                    on && 'ring-1 ring-white',
-                    !marked && !spoken && 'hover:bg-neutral-800',
-                  )}
-                >
-                  {word.text}
-                </button>
+                <span key={word.start} className="relative inline-block">
+                  <button
+                    type="button"
+                    title={wordSummary(word)}
+                    disabled={speaking}
+                    onClick={() =>
+                      setSelectedStart((current) => (current === word.start ? null : word.start))
+                    }
+                    style={marked ? wordFill(word.pitch, word.rate, word.language) : undefined}
+                    className={cn(
+                      'cursor-pointer rounded-[3px] px-0.5 text-left text-inherit',
+                      spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
+                      on && 'ring-1 ring-white',
+                      !marked && !spoken && 'hover:bg-neutral-800',
+                    )}
+                  >
+                    {word.text}
+                  </button>
+                  {on ? (
+                    <WordMenu>
+                      <CommandButtons
+                        language={word.language}
+                        pitch={word.pitch}
+                        rate={word.rate}
+                        onLanguage={(l) => applyToSelected({ language: l })}
+                        onPitch={(n) => applyToSelected({ pitch: n })}
+                        onRate={(n) => applyToSelected({ rate: n })}
+                      />
+                    </WordMenu>
+                  ) : null}
+                </span>
               )
             })}
           </div>
@@ -250,19 +279,6 @@ export function TalkPanel({
           <p className="pointer-events-none absolute top-1 left-0 text-2xl leading-snug font-medium tracking-tight text-neutral-600 sm:text-3xl">
             Type anything. Talk It! will speak it in the selected voice.
           </p>
-        ) : null}
-        {selected && !showEditor ? (
-          <div className="absolute top-full left-0 z-30 mt-1">
-            <CommandButtons
-              language={selected.language}
-              pitch={selected.pitch}
-              rate={selected.rate}
-              selectedLabel={selected.text}
-              onLanguage={(l) => applyToSelected({ language: l })}
-              onPitch={(n) => applyToSelected({ pitch: n })}
-              onRate={(n) => applyToSelected({ rate: n })}
-            />
-          </div>
         ) : null}
       </div>
       {error ? (

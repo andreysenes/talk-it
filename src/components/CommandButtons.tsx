@@ -5,29 +5,25 @@ import type { Language } from '../engine/personalities'
 
 export type CommandKind = 'language' | 'pitch' | 'rate'
 
-const popoverClass =
-  'absolute top-full left-0 z-50 mt-1 min-w-[12rem] rounded-sm border border-neutral-800 bg-[#0c0c0c] p-3 shadow-lg shadow-black/60'
+const panelClass = 'rounded-sm border border-neutral-800 bg-black p-2.5'
 
 function Chip({
   label,
   token,
   open,
-  disabled,
   onToggle,
 }: {
   label: string
   token: string
   open: boolean
-  disabled?: boolean
   onToggle: () => void
 }) {
   return (
-    <div className="flex overflow-hidden rounded-sm border border-neutral-800">
+    <div className="flex w-full overflow-hidden rounded-sm border border-neutral-800">
       <button
         type="button"
-        disabled={disabled}
         onClick={onToggle}
-        className="px-3 py-1.5 text-left text-xs font-medium text-neutral-200 hover:bg-neutral-900 disabled:opacity-40"
+        className="min-w-0 flex-1 px-2.5 py-1.5 text-left text-xs font-medium text-neutral-200 hover:bg-neutral-900"
       >
         <span className="mr-1.5 text-[10px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
           {label}
@@ -36,17 +32,16 @@ function Chip({
       </button>
       <button
         type="button"
-        disabled={disabled}
         onClick={onToggle}
         className={cn(
-          'border-l border-neutral-800 px-2 text-neutral-500 hover:bg-neutral-900 hover:text-white disabled:opacity-40',
+          'border-l border-neutral-800 px-1.5 text-neutral-500 hover:bg-neutral-900 hover:text-white',
           open && 'bg-white text-black',
         )}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Configure ${label}`}
       >
-        <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
+                      <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
       </button>
     </div>
   )
@@ -56,7 +51,6 @@ export function CommandButtons({
   language,
   pitch,
   rate,
-  selectedLabel,
   onLanguage,
   onPitch,
   onRate,
@@ -64,17 +58,12 @@ export function CommandButtons({
   language: Language
   pitch: number
   rate: number
-  selectedLabel: string
   onLanguage: (l: Language) => void
   onPitch: (n: number) => void
   onRate: (n: number) => void
 }) {
   const [open, setOpen] = useState<CommandKind | null>('pitch')
   const rootRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setOpen('pitch')
-  }, [selectedLabel])
 
   useEffect(() => {
     if (open == null) return
@@ -109,9 +98,9 @@ export function CommandButtons({
   return (
     <div
       ref={rootRef}
-      className="relative z-20 flex flex-wrap items-center gap-2 overflow-visible rounded-sm bg-[#0c0c0c] p-1 shadow-lg shadow-black/60"
+      className="flex w-max flex-col gap-1 overflow-visible rounded-sm bg-[#0c0c0c] p-1 shadow-lg shadow-black/60"
     >
-      <div className="relative overflow-visible">
+      <div className="flex w-full flex-col gap-1">
         <Chip
           label="Language"
           token={langToken}
@@ -119,11 +108,11 @@ export function CommandButtons({
           onToggle={() => toggle('language')}
         />
         {open === 'language' ? (
-          <div className={popoverClass} role="dialog">
+          <div className={panelClass} role="dialog">
             <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
               Language
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
               <button
                 type="button"
                 className={cn(
@@ -153,7 +142,7 @@ export function CommandButtons({
         ) : null}
       </div>
 
-      <div className="relative overflow-visible">
+      <div className="flex w-full flex-col gap-1">
         <Chip
           label="Pitch"
           token={pitchToken}
@@ -161,13 +150,13 @@ export function CommandButtons({
           onToggle={() => toggle('pitch')}
         />
         {open === 'pitch' ? (
-          <div className={popoverClass} role="dialog">
+          <div className={panelClass} role="dialog">
             <ValuePanel label="Pitch" id="command-pitch" value={pitch} onChange={onPitch} />
           </div>
         ) : null}
       </div>
 
-      <div className="relative overflow-visible">
+      <div className="flex w-full flex-col gap-1">
         <Chip
           label="Rate"
           token={rateToken}
@@ -175,16 +164,11 @@ export function CommandButtons({
           onToggle={() => toggle('rate')}
         />
         {open === 'rate' ? (
-          <div className={popoverClass} role="dialog">
+          <div className={panelClass} role="dialog">
             <ValuePanel label="Rate" id="command-rate" value={rate} onChange={onRate} />
           </div>
         ) : null}
       </div>
-
-      <span className="text-[11px] text-neutral-600">
-        {selectedLabel}
-        {' · '}⌘/Ctrl+Enter talks
-      </span>
     </div>
   )
 }
