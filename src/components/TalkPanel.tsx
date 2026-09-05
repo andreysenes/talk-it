@@ -48,7 +48,7 @@ const editorClass =
   'w-full min-h-[1.25em] px-0 py-1 font-sans text-2xl leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:text-3xl'
 
 const wordClass =
-  'inline rounded-[3px] px-0 text-left text-2xl leading-snug font-medium tracking-tight text-inherit sm:text-3xl'
+  'inline border-0 p-0 m-0 bg-transparent align-baseline appearance-none [font:inherit] rounded-[3px] text-left'
 
 function WordEditor({
   text,
@@ -78,7 +78,7 @@ function WordEditor({
       style={style}
       className={cn(
         wordClass,
-        'inline w-auto min-w-[1ch] bg-transparent outline-none ring-1 ring-white',
+        'inline w-auto min-w-[1ch] bg-transparent outline-none shadow-[inset_0_0_0_1px_#fff]',
         className,
       )}
       onChange={(event) => setValue(event.target.value)}
@@ -480,14 +480,11 @@ export function TalkPanel({
                   : undefined
               return (
                 <span key={i} className="relative">
-                  {on ? (
+                  {on && !live ? (
                     <WordEditor
                       text={word.text}
                       style={fill}
-                      className={cn(
-                        spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
-                        word.muted && 'opacity-50',
-                      )}
+                      className={cn(word.muted && 'opacity-50')}
                       onCommit={renameSelected}
                       onDeselect={() => setSelectedStart(null)}
                     />
@@ -500,8 +497,9 @@ export function TalkPanel({
                       style={fill}
                       className={cn(
                         wordClass,
-                        'cursor-pointer',
-                        spoken && 'outline outline-1 outline-offset-1 outline-neutral-400',
+                        'cursor-pointer disabled:opacity-100',
+                        spoken && 'shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)]',
+                        on && 'shadow-[inset_0_0_0_1px_#fff]',
                         word.muted && 'opacity-50',
                         !marked && !spoken && 'hover:bg-neutral-800',
                       )}
@@ -509,7 +507,7 @@ export function TalkPanel({
                       {word.text}
                     </button>
                   )}
-                  {on ? (
+                  {on && !live ? (
                     <WordMenu>
                       <CommandButtons
                         state={word}
