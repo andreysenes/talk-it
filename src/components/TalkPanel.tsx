@@ -172,11 +172,12 @@ export function TalkPanel({
       </p>
       <div className="relative">
         {speaking ? (
-          <div className={cn(editorClass, error && 'border-white')}>
+          <div key="speaking" className={cn(editorClass, error && 'border-white')}>
             <WordHighlight text={text} start={highlight?.start ?? null} end={highlight?.end ?? null} />
           </div>
         ) : (
           <div
+            key="editing"
             id="talk-text"
             ref={editorRef}
             role="textbox"
@@ -186,7 +187,10 @@ export function TalkPanel({
             suppressContentEditableWarning
             tabIndex={0}
             className={cn(editorClass, 'cursor-text caret-white focus:border-white', error && 'border-white')}
-            onInput={(e) => onText(e.currentTarget.innerText)}
+            onInput={(e) => {
+              if (!e.currentTarget.isContentEditable) return
+              onText(e.currentTarget.innerText)
+            }}
             onPaste={(e) => {
               e.preventDefault()
               const clip = e.clipboardData.getData('text/plain')
