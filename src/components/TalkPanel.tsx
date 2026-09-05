@@ -89,6 +89,8 @@ function WordEditor({
       <input
         value={value}
         aria-label="Word"
+        // Default size=20 expands the grid; size=1 lets the ghost span own width.
+        size={1}
         style={style}
         className={cn(
           wordClass,
