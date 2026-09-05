@@ -1,53 +1,82 @@
-import { parseEmbedded } from './synth'
+import {
+  applyParsedCommand,
+  bagFromRegion,
+  CMD_AT_END,
+  FALLBACK_VOICE,
+  mergeBag,
+  parseEmbedded,
+  serializeBag,
+  stripInherited,
+  type VoicePatch,
+  type VoiceState,
+} from './commands'
 import type { Language } from './personalities'
 
-export type WordVoice = {
+export type WordVoice = VoiceState & {
   start: number
   end: number
   text: string
-  language: Language
-  pitch: number
-  rate: number
   hasLanguage: boolean
+  hasQuality: boolean
+  hasMix: boolean
   hasPitch: boolean
   hasRate: boolean
+  hasScale: boolean
+  hasVibrato: boolean
+  hasVibrate: boolean
+  hasTremolo: boolean
+  hasTrrate: boolean
+  hasBreath: boolean
+  hasTilt: boolean
+  hasEffort: boolean
 }
 
-export type VoiceDefaults = {
-  language: Language
-  pitch: number
-  rate: number
-}
+export type VoiceDefaults = VoiceState
 
 export type DisplayPiece =
   | { kind: 'text'; text: string }
   | { kind: 'word'; word: WordVoice }
 
-const CMD_AT_END =
-  /\{\{\s*(?:spanish|english|pitch\s+-?\d+|rate\s+-?\d+|speed\s+-?\d+)\s*\}\}\s*$/i
+const CLEAR_FLAGS = {
+  hasLanguage: false,
+  hasQuality: false,
+  hasMix: false,
+  hasPitch: false,
+  hasRate: false,
+  hasScale: false,
+  hasVibrato: false,
+  hasVibrate: false,
+  hasTremolo: false,
+  hasTrrate: false,
+  hasBreath: false,
+  hasTilt: false,
+  hasEffort: false,
+}
 
 export function annotateWords(source: string, defaults: VoiceDefaults): DisplayPiece[] {
   const parts = parseEmbedded(source)
   const pieces: DisplayPiece[] = []
-  let language = defaults.language
-  let pitch = defaults.pitch
-  let rate = defaults.rate
-  let pending = { language: false, pitch: false, rate: false }
+  let state: VoiceState = { ...FALLBACK_VOICE, ...defaults }
+  let pending = { ...CLEAR_FLAGS }
 
   for (const part of parts) {
-    if (part.kind === 'spanish' || part.kind === 'english') {
-      language = part.kind
-      pending.language = true
-      continue
-    }
-    if (part.kind === 'pitch') {
-      pitch = part.value
-      pending.pitch = true
-      continue
-    }
-    if (part.kind === 'rate') {
-      rate = part.value
-      pending.rate = true
+    if (part.kind === 'cmd') {
+      state = applyParsedCommand(state, part.name, part.value)
+      if (part.name === 'spanish' || part.name === 'english') pending.hasLanguage = true
+      else if (part.name === 'natural' || part.name === 'monotone' || part.name === 'sung') {
+        pending.hasQuality = true
+      } else if (part.name === 'normal' || part.name === 'breathy' || part.name === 'whispered') {
+        pending.hasMix = true
+      } else if (part.name === 'pitch') pending.hasPitch = true
+      else if (part.name === 'rate' || part.name === 'speed') pending.hasRate = true
+      else if (part.name === 'scale') pending.hasScale = true
+      else if (part.name === 'vibrato') pending.hasVibrato = true
+      else if (part.name === 'vibrate') pending.hasVibrate = true
+      else if (part.name === 'tremolo') pending.hasTremolo = true
+      else if (part.name === 'trrate') pending.hasTrrate = true
+      else if (part.name === 'breath') pending.hasBreath = true
+      else if (part.name === 'tilt') pending.hasTilt = true
+      else if (part.name === 'effort') pending.hasEffort = true
       continue
     }
 
@@ -62,19 +91,17 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
         pieces.push({ kind: 'text', text: chunk })
         continue
       }
-      const word: WordVoice = {
-        start,
-        end,
-        text: chunk,
-        language,
-        pitch,
-        rate,
-        hasLanguage: pending.language,
-        hasPitch: pending.pitch,
-        hasRate: pending.rate,
-      }
-      pending = { language: false, pitch: false, rate: false }
-      pieces.push({ kind: 'word', word })
+      pieces.push({
+        kind: 'word',
+        word: {
+          start,
+          end,
+          text: chunk,
+          ...state,
+          ...pending,
+        },
+      })
+      pending = { ...CLEAR_FLAGS }
     }
   }
 
@@ -83,6 +110,24 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
 
 export function wordsFromPieces(pieces: DisplayPiece[]): WordVoice[] {
   return pieces.flatMap((p) => (p.kind === 'word' ? [p.word] : []))
+}
+
+export function wordIsMarked(word: WordVoice): boolean {
+  return (
+    word.hasLanguage ||
+    word.hasQuality ||
+    word.hasMix ||
+    word.hasPitch ||
+    word.hasRate ||
+    word.hasScale ||
+    word.hasVibrato ||
+    word.hasVibrate ||
+    word.hasTremolo ||
+    word.hasTrrate ||
+    word.hasBreath ||
+    word.hasTilt ||
+    word.hasEffort
+  )
 }
 
 function commandRegion(source: string, wordStart: number) {
@@ -99,56 +144,15 @@ function commandRegion(source: string, wordStart: number) {
   return { regionStart, wordStart }
 }
 
-function tokensFromRegion(region: string) {
-  let language: Language | null = null
-  let pitch: number | null = null
-  let rate: number | null = null
-  const re =
-    /\{\{\s*(spanish|english|pitch\s+-?\d+|rate\s+-?\d+|speed\s+-?\d+)\s*\}\}/gi
-  let match: RegExpExecArray | null
-  while ((match = re.exec(region))) {
-    const body = (match[1] ?? '').trim().toLowerCase()
-    if (body === 'spanish' || body === 'english') language = body
-    else {
-      const [name, raw] = body.split(/\s+/)
-      const value = Number(raw)
-      if (!Number.isFinite(value) || value === 0) continue
-      if (name === 'pitch') pitch = value
-      else rate = value
-    }
-  }
-  return { language, pitch, rate }
-}
-
-function serializeCommands(cmds: {
-  language: Language | null
-  pitch: number | null
-  rate: number | null
-}) {
-  const bits: string[] = []
-  if (cmds.language) bits.push(`{{${cmds.language}}}`)
-  if (cmds.pitch != null) bits.push(`{{pitch ${cmds.pitch}}}`)
-  if (cmds.rate != null) bits.push(`{{rate ${cmds.rate}}}`)
-  return bits.length ? `${bits.join(' ')} ` : ''
-}
-
 export function setWordVoice(
   source: string,
   wordStart: number,
-  patch: Partial<{ language: Language; pitch: number; rate: number }>,
+  patch: VoicePatch,
   inherited: VoiceDefaults,
 ): { next: string; wordStart: number } {
   const { regionStart } = commandRegion(source, wordStart)
-  const existing = tokensFromRegion(source.slice(regionStart, wordStart))
-  const nextCmds = {
-    language: patch.language !== undefined ? patch.language : existing.language,
-    pitch: patch.pitch !== undefined ? patch.pitch : existing.pitch,
-    rate: patch.rate !== undefined ? patch.rate : existing.rate,
-  }
-  if (nextCmds.language === inherited.language) nextCmds.language = null
-  if (nextCmds.pitch === inherited.pitch) nextCmds.pitch = null
-  if (nextCmds.rate === inherited.rate) nextCmds.rate = null
-  const insert = serializeCommands(nextCmds)
+  const existing = bagFromRegion(source.slice(regionStart, wordStart))
+  const insert = serializeBag(stripInherited(mergeBag(existing, patch), inherited))
   return {
     next: source.slice(0, regionStart) + insert + source.slice(wordStart),
     wordStart: regionStart + insert.length,
@@ -165,7 +169,21 @@ export function inheritedBeforeWord(
   const prior = wordsFromPieces(prefix)
   const last = prior[prior.length - 1]
   if (!last) return defaults
-  return { language: last.language, pitch: last.pitch, rate: last.rate }
+  return {
+    language: last.language,
+    quality: last.quality,
+    mix: last.mix,
+    pitch: last.pitch,
+    rate: last.rate,
+    scale: last.scale,
+    vibrato: last.vibrato,
+    vibrate: last.vibrate,
+    tremolo: last.tremolo,
+    trrate: last.trrate,
+    breath: last.breath,
+    tilt: last.tilt,
+    effort: last.effort,
+  }
 }
 
 /** Hue from pitch (low = blue, high = amber). Alpha from rate. */
@@ -184,6 +202,15 @@ export function wordFill(
 }
 
 export function wordSummary(word: WordVoice): string {
-  const lang = word.language === 'spanish' ? 'Spanish' : 'English'
-  return `${lang} · pitch ${word.pitch} · rate ${word.rate}`
+  const bits = [
+    word.language === 'spanish' ? 'Spanish' : 'English',
+    word.quality,
+    word.mix,
+    `pitch ${word.pitch}`,
+    `rate ${word.rate}`,
+    `scale ${word.scale}`,
+    `vibrato ${word.vibrato}`,
+    `breath ${word.breath}`,
+  ]
+  return bits.join(' · ')
 }

@@ -4,6 +4,12 @@ import {
   renderToBuffer,
   type ScheduleEvent,
 } from 'klattsch'
+import {
+  applyParsedCommand,
+  COMMAND_RE,
+  parseEmbedded,
+  type VoiceState,
+} from './commands'
 import { phonesToArpabet, textToPhones } from './g2p'
 import {
   type Personality,
@@ -13,6 +19,7 @@ import {
 } from './personalities'
 
 export type { TalkSettings }
+export { COMMAND_RE, parseEmbedded }
 
 export type RenderedUtterance = {
   samples: Float32Array
@@ -69,10 +76,8 @@ function effortMix(
   }
 }
 
-function voicePrefix(settings: TalkSettings): string {
-  const { personality, pitch, speed, pitchQuality, vocalEffort } = settings
-  const f0 = pitchToHz(pitch)
-  const rate = speedToRateMs(speed, pitchQuality)
+export function defaultsFromSettings(settings: TalkSettings): VoiceState {
+  const { personality, pitch, speed, pitchQuality, vocalEffort, language } = settings
   const mix = effortMix(personality, vocalEffort)
   const vib =
     pitchQuality === 'sung'
@@ -80,56 +85,67 @@ function voicePrefix(settings: TalkSettings): string {
       : pitchQuality === 'monotone'
         ? 0
         : personality.vibrato
-  const tilt = personality.tilt + (vocalEffort === 'whispered' ? -0.12 : 0)
-
-  return [
-    `b${f0.toFixed(1)}`,
-    `r${rate.toFixed(0)}`,
-    `s${personality.scale.toFixed(3)}`,
-    `h${mix.breath.toFixed(2)}`,
-    `g${mix.effort.toFixed(2)}`,
-    `t${tilt.toFixed(2)}`,
-    `v${vib.toFixed(1)}`,
-    `w${personality.vibratoRate.toFixed(1)}`,
-  ].join(' ')
+  return {
+    language,
+    quality: pitchQuality,
+    mix: vocalEffort,
+    pitch,
+    rate: speed,
+    scale: personality.scale,
+    vibrato: vib,
+    vibrate: personality.vibratoRate,
+    tremolo: 0,
+    trrate: 5,
+    breath: mix.breath,
+    tilt: personality.tilt + (vocalEffort === 'whispered' ? -0.12 : 0),
+    effort: mix.effort,
+  }
 }
 
-export const COMMAND_RE =
-  /\{\{\s*(spanish|english|pitch\s+-?\d+|rate\s+-?\d+|speed\s+-?\d+)\s*\}\}/gi
-
-type Embedded =
-  | { kind: 'text'; text: string; start: number; end: number }
-  | { kind: 'spanish'; start: number; end: number }
-  | { kind: 'english'; start: number; end: number }
-  | { kind: 'pitch'; value: number; start: number; end: number }
-  | { kind: 'rate'; value: number; start: number; end: number }
-
-export function parseEmbedded(text: string): Embedded[] {
-  const out: Embedded[] = []
-  const re = new RegExp(COMMAND_RE.source, 'gi')
-  let last = 0
-  let match: RegExpExecArray | null
-  while ((match = re.exec(text))) {
-    if (match.index > last) {
-      out.push({ kind: 'text', text: text.slice(last, match.index), start: last, end: match.index })
-    }
-    const body = (match[1] ?? '').trim().toLowerCase()
-    const start = match.index
-    const end = match.index + match[0].length
-    if (body === 'spanish' || body === 'english') {
-      out.push({ kind: body, start, end })
-    } else {
-      const [name, raw] = body.split(/\s+/)
-      const value = Number(raw)
-      if (Number.isFinite(value) && value !== 0) {
-        out.push({ kind: name === 'pitch' ? 'pitch' : 'rate', value, start, end })
-      }
-    }
-    last = match.index + match[0].length
+function applyMix(state: VoiceState, personality: Personality, mix: VocalEffort): VoiceState {
+  const next = effortMix(personality, mix)
+  return {
+    ...state,
+    mix,
+    breath: next.breath,
+    effort: next.effort,
+    tilt: personality.tilt + (mix === 'whispered' ? -0.12 : 0),
   }
-  if (last < text.length) {
-    out.push({ kind: 'text', text: text.slice(last), start: last, end: text.length })
+}
+
+function emitKlattsch(state: VoiceState): string[] {
+  return [
+    `b${pitchToHz(state.pitch).toFixed(1)}`,
+    `r${speedToRateMs(state.rate, state.quality).toFixed(0)}`,
+    `s${state.scale.toFixed(3)}`,
+    `h${state.breath.toFixed(2)}`,
+    `g${state.effort.toFixed(2)}`,
+    `t${state.tilt.toFixed(2)}`,
+    `v${state.vibrato.toFixed(1)}`,
+    `w${state.vibrate.toFixed(1)}`,
+    `m${state.tremolo.toFixed(2)}`,
+    `n${state.trrate.toFixed(1)}`,
+  ]
+}
+
+function voicePrefix(settings: TalkSettings): string {
+  return emitKlattsch(defaultsFromSettings(settings)).join(' ')
+}
+
+function emitChange(before: VoiceState, after: VoiceState): string[] {
+  const out: string[] = []
+  if (before.pitch !== after.pitch) out.push(`b${pitchToHz(after.pitch).toFixed(1)}`)
+  if (before.rate !== after.rate || before.quality !== after.quality) {
+    out.push(`r${speedToRateMs(after.rate, after.quality).toFixed(0)}`)
   }
+  if (before.scale !== after.scale) out.push(`s${after.scale.toFixed(3)}`)
+  if (before.breath !== after.breath) out.push(`h${after.breath.toFixed(2)}`)
+  if (before.effort !== after.effort) out.push(`g${after.effort.toFixed(2)}`)
+  if (before.tilt !== after.tilt) out.push(`t${after.tilt.toFixed(2)}`)
+  if (before.vibrato !== after.vibrato) out.push(`v${after.vibrato.toFixed(1)}`)
+  if (before.vibrate !== after.vibrate) out.push(`w${after.vibrate.toFixed(1)}`)
+  if (before.tremolo !== after.tremolo) out.push(`m${after.tremolo.toFixed(2)}`)
+  if (before.trrate !== after.trrate) out.push(`n${after.trrate.toFixed(1)}`)
   return out
 }
 
@@ -149,7 +165,7 @@ function planUtterance(
   const parts = parseEmbedded(text)
   const tokens: string[] = [voicePrefix(settings)]
   const words: PlannedWord[] = []
-  let language = settings.language
+  let state = defaultsFromSettings(settings)
   const question = /\?\s*$/.test(text.replace(COMMAND_RE, ' '))
   const lastTextIndex = parts.reduce(
     (acc, part, i) => (part.kind === 'text' && part.text.trim() ? i : acc),
@@ -159,23 +175,20 @@ function planUtterance(
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
     if (!part) continue
-    if (part.kind === 'spanish') {
-      language = 'spanish'
+    if (part.kind === 'cmd') {
+      const before = state
+      state = applyParsedCommand(state, part.name, part.value)
+      if (part.name === 'sung') state = { ...state, vibrato: Math.max(state.vibrato, 4) }
+      else if (part.name === 'monotone') state = { ...state, vibrato: 0 }
+      else if (part.name === 'natural') {
+        state = { ...state, vibrato: settings.personality.vibrato }
+      } else if (part.name === 'normal' || part.name === 'breathy' || part.name === 'whispered') {
+        state = applyMix(state, settings.personality, state.mix)
+      }
+      tokens.push(...emitChange(before, state))
       continue
     }
-    if (part.kind === 'english') {
-      language = 'english'
-      continue
-    }
-    if (part.kind === 'pitch') {
-      tokens.push(`b${pitchToHz(part.value).toFixed(1)}`)
-      continue
-    }
-    if (part.kind === 'rate') {
-      tokens.push(`r${speedToRateMs(part.value, settings.pitchQuality).toFixed(0)}`)
-      continue
-    }
-    const chunks = textToPhones(part.text, language, part.start)
+    const chunks = textToPhones(part.text, state.language, part.start)
     for (const chunk of chunks) {
       if (chunk.phones.length) {
         words.push({
@@ -187,7 +200,7 @@ function planUtterance(
     }
     const arpabet = phonesToArpabet(
       chunks,
-      settings.pitchQuality,
+      state.quality,
       question && i === lastTextIndex,
       i === lastTextIndex,
     )

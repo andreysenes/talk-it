@@ -4,8 +4,23 @@ import {
   setWordVoice,
   wordsFromPieces,
 } from '../src/engine/wordCommands.ts'
+import type { VoiceState } from '../src/engine/commands.ts'
 
-const defaults = { language: 'english' as const, pitch: 100, rate: 150 }
+const defaults: VoiceState = {
+  language: 'english',
+  quality: 'natural',
+  mix: 'normal',
+  pitch: 100,
+  rate: 150,
+  scale: 1,
+  vibrato: 0,
+  vibrate: 5,
+  tremolo: 0,
+  trrate: 5,
+  breath: 0,
+  tilt: 0.02,
+  effort: 0.52,
+}
 const text = "I'll {{pitch 220}}take you to the candy shop."
 const pieces = annotateWords(text, defaults)
 const words = wordsFromPieces(pieces)
@@ -27,4 +42,10 @@ const cleared = setWordVoice(
 )
 if (/\{\{pitch 80\}\}/.test(cleared.next)) throw new Error(`still tagged: ${cleared.next}`)
 
-console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next }))
+const scaled = setWordVoice(text, take.start, { scale: 1.25, vibrato: 4 }, inherited)
+if (!scaled.next.includes('{{scale 1.25}}')) throw new Error(scaled.next)
+if (!scaled.next.includes('{{vibrato 4.0}}') && !scaled.next.includes('{{vibrato 4}}')) {
+  throw new Error(scaled.next)
+}
+
+console.log(JSON.stringify({ ok: true, next: next.next, cleared: cleared.next, scaled: scaled.next }))

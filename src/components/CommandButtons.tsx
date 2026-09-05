@@ -1,9 +1,12 @@
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '../lib/utils'
-import type { Language } from '../engine/personalities'
-
-export type CommandKind = 'language' | 'pitch' | 'rate'
+import {
+  COMMAND_CHIPS,
+  type ChipId,
+  type VoicePatch,
+  type VoiceState,
+} from '../engine/commands'
 
 const panelClass = 'rounded-sm border border-neutral-800 bg-black p-2.5'
 
@@ -41,28 +44,20 @@ function Chip({
         aria-haspopup="dialog"
         aria-label={`Configure ${label}`}
       >
-                      <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
       </button>
     </div>
   )
 }
 
 export function CommandButtons({
-  language,
-  pitch,
-  rate,
-  onLanguage,
-  onPitch,
-  onRate,
+  state,
+  onPatch,
 }: {
-  language: Language
-  pitch: number
-  rate: number
-  onLanguage: (l: Language) => void
-  onPitch: (n: number) => void
-  onRate: (n: number) => void
+  state: VoiceState
+  onPatch: (patch: VoicePatch) => void
 }) {
-  const [open, setOpen] = useState<CommandKind | null>('pitch')
+  const [open, setOpen] = useState<ChipId | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -87,88 +82,60 @@ export function CommandButtons({
     }
   }, [open])
 
-  const langToken = language === 'spanish' ? '{{spanish}}' : '{{english}}'
-  const pitchToken = `{{pitch ${pitch}}}`
-  const rateToken = `{{rate ${rate}}}`
-
-  function toggle(kind: CommandKind) {
+  function toggle(kind: ChipId) {
     setOpen((current) => (current === kind ? null : kind))
   }
 
   return (
     <div
       ref={rootRef}
-      className="flex w-max flex-col gap-1 overflow-visible rounded-sm bg-[#0c0c0c] p-1 shadow-lg shadow-black/60"
+      className="flex max-h-[min(70vh,28rem)] w-max flex-col gap-1 overflow-y-auto overflow-x-visible rounded-sm bg-[#0c0c0c] p-1 shadow-lg shadow-black/60"
     >
-      <div className="flex w-full flex-col gap-1">
-        <Chip
-          label="Language"
-          token={langToken}
-          open={open === 'language'}
-          onToggle={() => toggle('language')}
-        />
-        {open === 'language' ? (
-          <div className={panelClass} role="dialog">
-            <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
-              Language
-            </p>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                className={cn(
-                  'rounded-sm px-3 py-1.5 text-xs font-medium',
-                  language === 'english'
-                    ? 'bg-white text-black'
-                    : 'border border-neutral-800 text-neutral-400 hover:text-white',
-                )}
-                onClick={() => onLanguage('english')}
-              >
-                English
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  'rounded-sm px-3 py-1.5 text-xs font-medium',
-                  language === 'spanish'
-                    ? 'bg-white text-black'
-                    : 'border border-neutral-800 text-neutral-400 hover:text-white',
-                )}
-                onClick={() => onLanguage('spanish')}
-              >
-                Spanish
-              </button>
+      {COMMAND_CHIPS.map((chip) => (
+        <div key={chip.id} className="flex w-full flex-col gap-1">
+          <Chip
+            label={chip.label}
+            token={chip.token(state)}
+            open={open === chip.id}
+            onToggle={() => toggle(chip.id)}
+          />
+          {open === chip.id ? (
+            <div className={panelClass} role="dialog">
+              {chip.kind === 'choice' && chip.choices ? (
+                <div className="flex flex-col gap-2">
+                  {chip.choices.map((choice) => {
+                    const on = state[chip.id] === choice.id
+                    return (
+                      <button
+                        key={choice.id}
+                        type="button"
+                        className={cn(
+                          'rounded-sm px-3 py-1.5 text-xs font-medium',
+                          on
+                            ? 'bg-white text-black'
+                            : 'border border-neutral-800 text-neutral-400 hover:text-white',
+                        )}
+                        onClick={() => onPatch({ [chip.id]: choice.id } as VoicePatch)}
+                      >
+                        {choice.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <ValuePanel
+                  label={chip.label}
+                  id={`command-${chip.id}`}
+                  value={state[chip.id] as number}
+                  step={chip.step}
+                  allowZero={chip.allowZero}
+                  onChange={(n) => onPatch({ [chip.id]: n } as VoicePatch)}
+                />
+              )}
             </div>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex w-full flex-col gap-1">
-        <Chip
-          label="Pitch"
-          token={pitchToken}
-          open={open === 'pitch'}
-          onToggle={() => toggle('pitch')}
-        />
-        {open === 'pitch' ? (
-          <div className={panelClass} role="dialog">
-            <ValuePanel label="Pitch" id="command-pitch" value={pitch} onChange={onPitch} />
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex w-full flex-col gap-1">
-        <Chip
-          label="Rate"
-          token={rateToken}
-          open={open === 'rate'}
-          onToggle={() => toggle('rate')}
-        />
-        {open === 'rate' ? (
-          <div className={panelClass} role="dialog">
-            <ValuePanel label="Rate" id="command-rate" value={rate} onChange={onRate} />
-          </div>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      ))}
     </div>
   )
 }
@@ -177,11 +144,15 @@ function ValuePanel({
   label,
   id,
   value,
+  step,
+  allowZero,
   onChange,
 }: {
   label: string
   id: string
   value: number
+  step?: number
+  allowZero?: boolean
   onChange: (n: number) => void
 }) {
   return (
@@ -196,10 +167,13 @@ function ValuePanel({
         id={id}
         name={id}
         type="number"
+        step={step}
         value={value}
         onChange={(e) => {
           const n = Number(e.target.value)
-          if (Number.isFinite(n) && n !== 0) onChange(n)
+          if (!Number.isFinite(n)) return
+          if (!allowZero && n === 0) return
+          onChange(n)
         }}
         className="h-8 w-24 rounded-sm border border-neutral-700 bg-black px-2 font-mono text-sm font-medium text-white outline-none focus:border-white"
       />

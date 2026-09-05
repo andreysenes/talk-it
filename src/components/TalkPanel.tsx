@@ -4,14 +4,17 @@ import { CommandButtons } from './CommandButtons'
 import { VolumeControl } from './VolumeControl'
 import { Button } from './ui/button'
 import { cn } from '../lib/utils'
-import type { Language } from '../engine/personalities'
+import type { Language, Personality, PitchQuality, VocalEffort } from '../engine/personalities'
+import { defaultsFromSettings } from '../engine/synth'
 import {
   annotateWords,
   inheritedBeforeWord,
   setWordVoice,
   wordFill,
+  wordIsMarked,
   wordSummary,
 } from '../engine/wordCommands'
+import type { VoicePatch } from '../engine/commands'
 
 const EXAMPLES = [
   {
@@ -113,6 +116,9 @@ export function TalkPanel({
   pitch,
   speed,
   language,
+  personality,
+  pitchQuality,
+  vocalEffort,
   speaking,
   error,
   highlight,
@@ -123,6 +129,9 @@ export function TalkPanel({
   pitch: number
   speed: number
   language: Language
+  personality: Personality
+  pitchQuality: PitchQuality
+  vocalEffort: VocalEffort
   speaking: boolean
   error: string | null
   highlight: { start: number; end: number } | null
@@ -134,8 +143,17 @@ export function TalkPanel({
   const editorRef = useRef<HTMLDivElement>(null)
   const textBlockRef = useRef<HTMLDivElement>(null)
   const defaults = useMemo(
-    () => ({ language, pitch, rate: speed }),
-    [language, pitch, speed],
+    () =>
+      defaultsFromSettings({
+        personality,
+        pitch,
+        speed,
+        pitchQuality,
+        vocalEffort,
+        language,
+        vintage: true,
+      }),
+    [personality, pitch, speed, pitchQuality, vocalEffort, language],
   )
   const pieces = useMemo(() => annotateWords(text, defaults), [text, defaults])
 
@@ -165,7 +183,7 @@ export function TalkPanel({
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [selectedStart])
 
-  function applyToSelected(patch: Partial<{ language: Language; pitch: number; rate: number }>) {
+  function applyToSelected(patch: VoicePatch) {
     if (selectedStart == null) return
     const inherited = inheritedBeforeWord(text, selectedStart, defaults)
     const result = setWordVoice(text, selectedStart, patch, inherited)
@@ -236,7 +254,7 @@ export function TalkPanel({
                 return <span key={`s-${i}`}>{piece.text}</span>
               }
               const word = piece.word
-              const marked = word.hasLanguage || word.hasPitch || word.hasRate
+              const marked = wordIsMarked(word)
               const spoken =
                 highlight != null &&
                 highlight.start < word.end &&
@@ -264,12 +282,8 @@ export function TalkPanel({
                   {on ? (
                     <WordMenu>
                       <CommandButtons
-                        language={word.language}
-                        pitch={word.pitch}
-                        rate={word.rate}
-                        onLanguage={(l) => applyToSelected({ language: l })}
-                        onPitch={(n) => applyToSelected({ pitch: n })}
-                        onRate={(n) => applyToSelected({ rate: n })}
+                        state={word}
+                        onPatch={(patch) => applyToSelected(patch)}
                       />
                     </WordMenu>
                   ) : null}

@@ -171,6 +171,9 @@ export default function App() {
             pitch={pitch}
             speed={speed}
             language={language}
+            personality={personality}
+            pitchQuality={pitchQuality}
+            vocalEffort={vocalEffort}
             speaking={state === 'speaking'}
             error={error}
             highlight={highlight}

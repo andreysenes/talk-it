@@ -72,8 +72,15 @@ SoftVoice allowed commands in `{{braces}}`. Supported here:
 
 ```
 {{spanish}}  {{english}}
+{{natural}}  {{monotone}}  {{sung}}
+{{normal}}   {{breathy}}   {{whispered}}
 {{pitch 66}} {{rate 138}}
+{{scale 1.17}} {{vibrato 4}} {{vibrate 5.5}}
+{{tremolo 0.2}} {{trrate 5}}
+{{breath 0.4}} {{tilt 0.08}} {{effort 0.5}}
 ```
+
+Tap a word to set any of these on that word. Commands stay hidden in the line.
 
 ## Why not load the DLL on Mac?
 
