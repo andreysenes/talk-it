@@ -407,6 +407,21 @@ export type TalkSettings = {
   vocalEffort: VocalEffort
   language: Language
   vintage: boolean
+  vibrato?: number
+  vibratoRate?: number
+  scale?: number
+}
+
+export function voiceFromPersonality(p: Personality) {
+  return {
+    pitch: p.pitch,
+    speed: p.speed,
+    pitchQuality: p.pitchQuality,
+    vocalEffort: p.vocalEffort,
+    vibrato: p.vibrato,
+    vibratoRate: p.vibratoRate,
+    scale: p.scale,
+  }
 }
 
 export function personalityById(id: PersonalityId): Personality {

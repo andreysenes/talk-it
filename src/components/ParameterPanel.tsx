@@ -1,4 +1,4 @@
-import type { Language, PitchQuality, VocalEffort } from '../engine/personalities'
+import type { Language } from '../engine/personalities'
 import { cn } from '../lib/utils'
 
 function RadioGroup<T extends string>({
@@ -43,46 +43,18 @@ function RadioGroup<T extends string>({
 }
 
 export function ParameterPanel({
-  pitchQuality,
-  vocalEffort,
   language,
   vintage,
-  onPitchQuality,
-  onVocalEffort,
   onLanguage,
   onVintage,
 }: {
-  pitchQuality: PitchQuality
-  vocalEffort: VocalEffort
   language: Language
   vintage: boolean
-  onPitchQuality: (v: PitchQuality) => void
-  onVocalEffort: (v: VocalEffort) => void
   onLanguage: (v: Language) => void
   onVintage: (v: boolean) => void
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <RadioGroup
-        legend="Pitch quality"
-        value={pitchQuality}
-        onChange={onPitchQuality}
-        options={[
-          { id: 'natural', label: 'Natural' },
-          { id: 'monotone', label: 'Monotone' },
-          { id: 'sung', label: 'Sung' },
-        ]}
-      />
-      <RadioGroup
-        legend="Vocal effort"
-        value={vocalEffort}
-        onChange={onVocalEffort}
-        options={[
-          { id: 'normal', label: 'Normal' },
-          { id: 'breathy', label: 'Breathy' },
-          { id: 'whispered', label: 'Whispered' },
-        ]}
-      />
+    <div className="grid gap-4 sm:grid-cols-2">
       <RadioGroup
         legend="Language"
         value={language}

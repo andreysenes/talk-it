@@ -3,9 +3,9 @@ import { MidiBadge } from './components/MidiBadge'
 import { ParameterPanel } from './components/ParameterPanel'
 import { PersonalityGrid } from './components/PersonalityGrid'
 import { TalkActions, TalkPanel } from './components/TalkPanel'
-import { VoiceSliders } from './components/VoiceSliders'
 import {
   PERSONALITIES,
+  voiceFromPersonality,
   type Language,
   type Personality,
   type PitchQuality,
@@ -25,6 +25,9 @@ type Saved = {
   vocalEffort: VocalEffort
   language: Language
   vintage: boolean
+  vibrato?: number
+  vibratoRate?: number
+  scale?: number
   text: string
   volume: number
   pads?: PhrasePad[]
@@ -46,14 +49,20 @@ export default function App() {
     PERSONALITIES.find((p) => p.id === saved.personalityId) ?? PERSONALITIES[0]
 
   const [personality, setPersonality] = useState<Personality>(initial)
-  const [pitch, setPitch] = useState(saved.pitch ?? initial.pitch)
-  const [speed, setSpeed] = useState(saved.speed ?? initial.speed)
+  const initialVoice = voiceFromPersonality(initial)
+  const [pitch, setPitch] = useState(saved.pitch ?? initialVoice.pitch)
+  const [speed, setSpeed] = useState(saved.speed ?? initialVoice.speed)
   const [pitchQuality, setPitchQuality] = useState<PitchQuality>(
-    saved.pitchQuality ?? initial.pitchQuality,
+    saved.pitchQuality ?? initialVoice.pitchQuality,
   )
   const [vocalEffort, setVocalEffort] = useState<VocalEffort>(
-    saved.vocalEffort ?? initial.vocalEffort,
+    saved.vocalEffort ?? initialVoice.vocalEffort,
   )
+  const [vibrato, setVibrato] = useState(saved.vibrato ?? initialVoice.vibrato)
+  const [vibratoRate, setVibratoRate] = useState(
+    saved.vibratoRate ?? initialVoice.vibratoRate,
+  )
+  const [scale, setScale] = useState(saved.scale ?? initialVoice.scale)
   const [language, setLanguage] = useState<Language>(saved.language ?? 'english')
   const [vintage, setVintage] = useState(saved.vintage ?? true)
   const [pads, setPads] = useState(() => normalizePads(saved.pads))
@@ -84,6 +93,9 @@ export default function App() {
     vocalEffort,
     language,
     vintage,
+    vibrato,
+    vibratoRate,
+    scale,
   }
   const settingsRef = useRef(settings)
   settingsRef.current = settings
@@ -99,13 +111,16 @@ export default function App() {
       vocalEffort,
       language,
       vintage,
+      vibrato,
+      vibratoRate,
+      scale,
       text,
       volume,
       pads,
       activePad,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [personality, pitch, speed, pitchQuality, vocalEffort, language, vintage, text, volume, pads, activePad])
+  }, [personality, pitch, speed, pitchQuality, vocalEffort, vibrato, vibratoRate, scale, language, vintage, text, volume, pads, activePad])
 
   useEffect(() => {
     setPads((prev) => {
@@ -118,11 +133,15 @@ export default function App() {
   }, [text, activePad])
 
   function selectPersonality(p: Personality) {
+    const voice = voiceFromPersonality(p)
     setPersonality(p)
-    setPitch(p.pitch)
-    setSpeed(p.speed)
-    setPitchQuality(p.pitchQuality)
-    setVocalEffort(p.vocalEffort)
+    setPitch(voice.pitch)
+    setSpeed(voice.speed)
+    setPitchQuality(voice.pitchQuality)
+    setVocalEffort(voice.vocalEffort)
+    setVibrato(voice.vibrato)
+    setVibratoRate(voice.vibratoRate)
+    setScale(voice.scale)
   }
 
   return (
@@ -132,7 +151,21 @@ export default function App() {
         <main className="talk-panel flex flex-col gap-8 rounded-sm p-4 sm:p-6">
           <PersonalityGrid
             selectedId={personality.id}
+            pitch={pitch}
+            speed={speed}
+            pitchQuality={pitchQuality}
+            vocalEffort={vocalEffort}
+            vibrato={vibrato}
+            vibratoRate={vibratoRate}
+            scale={scale}
             onSelect={selectPersonality}
+            onPitch={setPitch}
+            onSpeed={setSpeed}
+            onPitchQuality={setPitchQuality}
+            onVocalEffort={setVocalEffort}
+            onVibrato={setVibrato}
+            onVibratoRate={setVibratoRate}
+            onScale={setScale}
           />
           <TalkActions
             speaking={state === 'speaking'}
@@ -173,19 +206,9 @@ export default function App() {
               />
             }
           />
-          <VoiceSliders
-            pitch={pitch}
-            speed={speed}
-            onPitch={setPitch}
-            onSpeed={setSpeed}
-          />
           <ParameterPanel
-            pitchQuality={pitchQuality}
-            vocalEffort={vocalEffort}
             language={language}
             vintage={vintage}
-            onPitchQuality={setPitchQuality}
-            onVocalEffort={setVocalEffort}
             onLanguage={setLanguage}
             onVintage={setVintage}
           />
@@ -198,6 +221,9 @@ export default function App() {
             personality={personality}
             pitchQuality={pitchQuality}
             vocalEffort={vocalEffort}
+            vibrato={vibrato}
+            vibratoRate={vibratoRate}
+            scale={scale}
             speaking={state === 'speaking'}
             paused={state === 'paused'}
             error={error}

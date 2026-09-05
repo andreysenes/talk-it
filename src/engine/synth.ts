@@ -79,21 +79,24 @@ function effortMix(
 export function defaultsFromSettings(settings: TalkSettings): VoiceState {
   const { personality, pitch, speed, pitchQuality, vocalEffort, language } = settings
   const mix = effortMix(personality, vocalEffort)
+  const scale = settings.scale ?? personality.scale
+  const vibrate = settings.vibratoRate ?? personality.vibratoRate
   const vib =
-    pitchQuality === 'sung'
+    settings.vibrato ??
+    (pitchQuality === 'sung'
       ? Math.max(personality.vibrato, 4)
       : pitchQuality === 'monotone'
         ? 0
-        : personality.vibrato
+        : personality.vibrato)
   return {
     language,
     quality: pitchQuality,
     mix: vocalEffort,
     pitch,
     rate: speed,
-    scale: personality.scale,
+    scale,
     vibrato: vib,
-    vibrate: personality.vibratoRate,
+    vibrate,
     tremolo: 0,
     trrate: 5,
     breath: mix.breath,
@@ -181,7 +184,7 @@ function planUtterance(
       if (part.name === 'sung') state = { ...state, vibrato: Math.max(state.vibrato, 4) }
       else if (part.name === 'monotone') state = { ...state, vibrato: 0 }
       else if (part.name === 'natural') {
-        state = { ...state, vibrato: settings.personality.vibrato }
+        state = { ...state, vibrato: settings.vibrato ?? settings.personality.vibrato }
       } else if (part.name === 'normal' || part.name === 'breathy' || part.name === 'whispered') {
         state = applyMix(state, settings.personality, state.mix)
       }

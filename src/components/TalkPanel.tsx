@@ -205,6 +205,9 @@ export function TalkPanel({
   personality,
   pitchQuality,
   vocalEffort,
+  vibrato,
+  vibratoRate,
+  scale,
   speaking,
   paused,
   error,
@@ -226,6 +229,9 @@ export function TalkPanel({
   personality: Personality
   pitchQuality: PitchQuality
   vocalEffort: VocalEffort
+  vibrato: number
+  vibratoRate: number
+  scale: number
   speaking: boolean
   paused: boolean
   error: string | null
@@ -255,8 +261,11 @@ export function TalkPanel({
         vocalEffort,
         language,
         vintage: true,
+        vibrato,
+        vibratoRate,
+        scale,
       }),
-    [personality, pitch, speed, pitchQuality, vocalEffort, language],
+    [personality, pitch, speed, pitchQuality, vocalEffort, language, vibrato, vibratoRate, scale],
   )
   const pieces = useMemo(() => annotateWords(text, defaults), [text, defaults])
 
