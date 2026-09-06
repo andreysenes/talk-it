@@ -169,21 +169,46 @@ export function padsEqual(a: PhrasePad, b: PhrasePad): boolean {
   )
 }
 
-export const DEFAULT_PADS: PhrasePad[] = [
-  {
-    name: 'Big Robot',
-    text: 'All your base are belong to us.',
-    ...stockPadVoice('colossus'),
-  },
-  {
-    name: 'Candy shop',
-    text: "I'll take you to the candy shop.",
-    ...stockPadVoice('colossus'),
-  },
+/** SoftVoice demo lines for pads 1–3 (raw klattsch / Talk It! phoneme sequences). */
+export const PAD1_PHONEMES =
+  'r243.2 s1.14 bF#2 ( W ER ) bA2 ( K IH T ) bF#3 ( HH AA R ) bA3 ( D ER ) bC#4 ( M EY ) bA3 ( K IH T ) bF#3 ( B EH ) bA3 ( T ER ) bE2 ( D UW ) bE3 ( W IH T ) bA3 ( F AE S ) bE3 ( T ER ) bB3 ( M EY K ) bA3 ( S AH S ) bG#3 ( S T R AO NG ) bA3 ( G ER ) bEb2 ( M AO R ) bEb3 ( DH AE ) bF#4 ( N EH ) bEb4 ( V ER ) bB4 v8 w8 ( AW ) bA4 ( ER ) bF#4 ( AE F T ) bEb4 ( ER R ) bD3 v12 ( AW ) bD3 ( ER W ) v w bF#3 ( ER K ) bA3 ( IH Z N ) bF#2 s0.8 ( EH V ) bF#1 ( ER ) ( OW V ) r115 ER'
+
+export const PAD2_PHONEMES = 'g0.8 HH IY+30 b+50 v20 w10 D r900 IH-100 r D'
+
+export const PAD3_PHONEMES =
+  'r180 v15 w7 b200 s0.8 h0 g0.3 OW+20 N r360 OW-40 , AY r120 M T UH+20 R N IH NG IH+10 N T UW EY r300 b+20 B UH-30 G , b+300 r200 s1.6 h0.1 OW b+20 N OW-40 AY M EY b+20 B UH-40 G N AO-40 W'
+
+/** Retired English factory demos — upgraded to SoftVoice phoneme pads on load. */
+const LEGACY_FACTORY_PADS: Array<{ name: string; text: string }> = [
+  { name: 'Big Robot', text: 'All your base are belong to us.' },
+  { name: 'Candy shop', text: "I'll take you to the candy shop." },
   {
     name: 'World control',
     text: 'This is the voice of world control. Obey me and live.',
-    ...stockPadVoice('martian'),
+  },
+]
+
+export function isRetiredFactoryText(text: string): boolean {
+  return LEGACY_FACTORY_PADS.some((pad) => pad.text === text)
+}
+
+export const DEFAULT_PADS: PhrasePad[] = [
+  {
+    name: 'Harder Better',
+    text: PAD1_PHONEMES,
+    ...stockPadVoice('robotoid'),
+    pitchQuality: 'sung',
+    vibrato: Math.max(stockPadVoice('robotoid').vibrato, 5.5),
+  },
+  {
+    name: 'He did',
+    text: PAD2_PHONEMES,
+    ...stockPadVoice('male'),
+  },
+  {
+    name: "I'm a bug",
+    text: PAD3_PHONEMES,
+    ...stockPadVoice('choirboy'),
   },
   {
     name: 'Twinkle',
@@ -198,8 +223,26 @@ export function normalizePads(raw: unknown): PhrasePad[] {
   return Array.from({ length: PAD_COUNT }, (_, i) => {
     const pad = pads[i] as Partial<PhrasePad> | undefined
     const fallback = DEFAULT_PADS[i] ?? { name: '', text: '' }
-    const name = typeof pad?.name === 'string' ? pad.name : fallback.name
-    const text = typeof pad?.text === 'string' ? pad.text : fallback.text
+    const legacy = LEGACY_FACTORY_PADS[i]
+    const rawName = typeof pad?.name === 'string' ? pad.name : undefined
+    const rawText = typeof pad?.text === 'string' ? pad.text : undefined
+
+    // Replace retired English factory demos with SoftVoice phoneme examples.
+    if (
+      legacy &&
+      rawText === legacy.text &&
+      (rawName === undefined || rawName === legacy.name) &&
+      isPersonalityId(fallback.personalityId)
+    ) {
+      return {
+        name: fallback.name,
+        text: fallback.text,
+        ...voiceFromPad(fallback, stockPadVoice('male')),
+      }
+    }
+
+    const name = rawName ?? fallback.name
+    const text = rawText ?? fallback.text
     const hasVoice = isPersonalityId(pad?.personalityId)
     if (hasVoice) {
       const voice = voiceFromPad(pad ?? {}, voiceFromPad(fallback, stockPadVoice('male')))

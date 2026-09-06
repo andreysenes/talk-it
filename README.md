@@ -29,6 +29,8 @@ Open [http://127.0.0.1:4521](http://127.0.0.1:4521).
 - **⌘/Ctrl+Enter** — speak the whole line.
 - **1–0, -, =** — load and speak pads 1–12.
 
+Pads **1–3** ship SoftVoice-style phoneme demos (notes like `bF#2`, rates, `( W ER )` groups). Paste the same syntax into the line and Talk It! sends it straight to the formant engine without English G2P.
+
 ```bash
 npm run build
 npm run preview

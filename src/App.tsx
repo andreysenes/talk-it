@@ -14,6 +14,7 @@ import {
 import {
   DEFAULT_PADS,
   emptyPad,
+  isRetiredFactoryText,
   normalizePads,
   padIndexFromMidiNote,
   padsEqual,
@@ -84,11 +85,15 @@ function bootFromSaved(saved: Partial<Saved>) {
     scale: typeof saved.scale === 'number' ? saved.scale : fallback.scale,
   }
   const voice = voiceFromPad(pads[activePad] ?? {}, migrated)
+  const padText = pads[activePad]?.text ?? DEFAULT_PADS[0]!.text
+  const savedText = typeof saved.text === 'string' ? saved.text : padText
+  // Don't keep a retired factory line in the editor after pads were upgraded.
+  const text = isRetiredFactoryText(savedText) ? padText : savedText
   return {
     pads,
     activePad,
     voice,
-    text: saved.text ?? pads[activePad]?.text ?? DEFAULT_PADS[0]!.text,
+    text,
     volume:
       typeof saved.volume === 'number' && Number.isFinite(saved.volume)
         ? Math.min(100, Math.max(0, saved.volume))

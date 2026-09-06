@@ -162,12 +162,100 @@ export function textToPhonemeString(
   return planUtterance(text, settings).phonemes
 }
 
+/**
+ * SoftVoice / Talk It! phoneme lines (notes, rates, `( PHONE )` groups, ARPABET
+ * with pitch offsets) must skip English G2P and go straight to klattsch.
+ */
+export function isRawPhonemeSequence(text: string): boolean {
+  const stripped = text.replace(COMMAND_RE, ' ').trim()
+  if (!stripped) return false
+  if (/\(\s*[A-Z]{1,3}(?:[12])?(?:\s+[A-Z]{1,3}(?:[12])?)*\s*\)/.test(stripped)) {
+    return true
+  }
+  if (/\b[A-Z]{1,3}[+-]\d+\b/.test(stripped)) return true
+  if (
+    /\bb(?:[A-G](?:[#b]|bb)?\d+)\b/i.test(stripped) &&
+    /\b[A-Z]{1,3}\b/.test(stripped)
+  ) {
+    return true
+  }
+
+  const tokens = stripped.split(/[\s,]+/).filter(Boolean)
+  if (tokens.length < 3) return false
+  let hits = 0
+  for (const tok of tokens) {
+    if (/^[rsgvhmtwn]\d+(?:\.\d+)?$/i.test(tok)) hits += 1
+    else if (/^b(?:[A-G](?:[#b]|bb)?\d+|[+-]?\d+(?:\.\d+)?)$/i.test(tok)) hits += 1
+    else if (/^[A-Z]{1,3}(?:[+-]\d+)?$/.test(tok)) hits += 1
+    else if (tok === 'v' || tok === 'w' || tok === 'r' || tok === 's' || tok === 'h' || tok === 'g') {
+      hits += 1
+    }
+  }
+  return hits / tokens.length >= 0.65
+}
+
 type PlannedWord = { start: number; end: number; phoneCount: number }
+
+function applyCommandToken(
+  settings: TalkSettings,
+  state: VoiceState,
+  name: string,
+  value: number | null | undefined,
+): VoiceState {
+  let next = applyParsedCommand(state, name, value ?? null)
+  if (name === 'sung') next = { ...next, vibrato: Math.max(next.vibrato, 5.5) }
+  else if (name === 'monotone') next = { ...next, vibrato: 0 }
+  else if (name === 'natural') {
+    next = { ...next, vibrato: settings.vibrato ?? settings.personality.vibrato }
+  } else if (name === 'normal' || name === 'breathy' || name === 'whispered') {
+    next = applyMix(next, settings.personality, next.mix)
+  }
+  return next
+}
+
+function planRawUtterance(
+  text: string,
+  settings: TalkSettings,
+): { phonemes: string; words: PlannedWord[] } {
+  const parts = parseEmbedded(text)
+  const tokens: string[] = [voicePrefix(settings)]
+  const words: PlannedWord[] = []
+  let state = defaultsFromSettings(settings)
+
+  for (const part of parts) {
+    if (part.kind === 'cmd') {
+      if (part.disabled) continue
+      const before = state
+      state = applyCommandToken(settings, state, part.name, part.value)
+      tokens.push(...emitChange(before, state))
+      continue
+    }
+    const body = part.text
+    if (!body.trim()) continue
+    tokens.push(body.trim())
+
+    // Highlight each `( PHONE … )` group while audio runs.
+    const groupRe = /\(\s*[A-Z]{1,3}(?:[12])?(?:\s+[A-Z]{1,3}(?:[12])?)*\s*\)/g
+    let match: RegExpExecArray | null
+    while ((match = groupRe.exec(body)) !== null) {
+      const phones = match[0].replace(/[()]/g, '').trim().split(/\s+/).filter(Boolean)
+      words.push({
+        start: part.start + match.index,
+        end: part.start + match.index + match[0].length,
+        phoneCount: Math.max(1, phones.length),
+      })
+    }
+  }
+
+  return { phonemes: tokens.join(' ').trim(), words }
+}
 
 function planUtterance(
   text: string,
   settings: TalkSettings,
 ): { phonemes: string; words: PlannedWord[] } {
+  if (isRawPhonemeSequence(text)) return planRawUtterance(text, settings)
+
   const parts = parseEmbedded(text)
   const tokens: string[] = [voicePrefix(settings)]
   const words: PlannedWord[] = []
@@ -184,14 +272,7 @@ function planUtterance(
     if (part.kind === 'cmd') {
       if (part.disabled) continue
       const before = state
-      state = applyParsedCommand(state, part.name, part.value)
-      if (part.name === 'sung') state = { ...state, vibrato: Math.max(state.vibrato, 5.5) }
-      else if (part.name === 'monotone') state = { ...state, vibrato: 0 }
-      else if (part.name === 'natural') {
-        state = { ...state, vibrato: settings.vibrato ?? settings.personality.vibrato }
-      } else if (part.name === 'normal' || part.name === 'breathy' || part.name === 'whispered') {
-        state = applyMix(state, settings.personality, state.mix)
-      }
+      state = applyCommandToken(settings, state, part.name, part.value)
       tokens.push(...emitChange(before, state))
       continue
     }
