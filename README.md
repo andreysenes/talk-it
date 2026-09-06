@@ -30,19 +30,6 @@ npm run build
 npm run preview
 ```
 
-## How to get the Crystal Castles / All Your Base voice
-
-1. Select **Big Robot** (SoftVoice name: Colossus).
-2. Leave **Monotone** on.
-3. Keep **Classic 11 kHz** on (original SoftVoice output was 11025 Hz, 8-bit).
-4. Try:
-
-> All your base are belong to us.
-
-or
-
-> I'll take you to the candy shop.
-
 ## Personalities
 
 The Talk It! names and the reverse-engineered OpenTalkIt pitch/speed/F0/voicing presets are included:
