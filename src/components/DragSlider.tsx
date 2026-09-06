@@ -8,6 +8,7 @@ export function DragSlider({
   max,
   step,
   onChange,
+  compact = false,
 }: {
   label: string
   token: string
@@ -16,6 +17,7 @@ export function DragSlider({
   max: number
   step: number
   onChange: (n: number) => void
+  compact?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [live, setLive] = useState(value)
@@ -62,11 +64,20 @@ export function DragSlider({
         className="pointer-events-none absolute inset-y-0 left-0 bg-white/40"
         style={{ width: `${pct}%` }}
       />
-      <div className="relative z-10 flex min-w-0 flex-1 items-center justify-between gap-3 px-2.5 py-1.5 text-left text-xs font-medium text-white">
-        <span className="text-[10px] font-medium tracking-[0.14em] text-neutral-300 uppercase">
+      <div
+        className={
+          compact
+            ? 'relative z-10 flex min-w-0 flex-1 items-center justify-between gap-1 px-1.5 py-1 text-left text-[10px] font-medium text-white sm:gap-3 sm:px-2.5 sm:py-1.5 sm:text-xs'
+            : 'relative z-10 flex min-w-0 flex-1 items-center justify-between gap-3 px-2.5 py-1.5 text-left text-xs font-medium text-white'
+        }
+      >
+        <span className="text-[9px] font-medium tracking-[0.12em] text-neutral-300 uppercase sm:text-[10px] sm:tracking-[0.14em]">
           {label}
         </span>
-        <code className="font-mono text-[11px] text-white">{token}</code>
+        <code className="hidden font-mono text-[11px] text-white sm:inline">{token}</code>
+        <span className="font-mono text-[10px] text-white sm:hidden">
+          {token.replace(/^\{\{|\}\}$/g, '').replace(/^[a-z]+\s+/i, '')}
+        </span>
       </div>
     </div>
   )

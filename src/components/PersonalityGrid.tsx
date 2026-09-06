@@ -1,6 +1,7 @@
 import { Plus, X } from 'lucide-react'
 import {
   PERSONALITIES,
+  type Language,
   type Personality,
   type PersonalityId,
   type PitchQuality,
@@ -23,10 +24,10 @@ function ChoiceRow<T extends string>({
 }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="mb-1 text-[10px] font-medium tracking-[0.18em] text-neutral-500 uppercase sm:mb-2 sm:text-[11px]">
+      <legend className="mb-0.5 text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase sm:mb-1.5 sm:text-[11px]">
         {legend}
       </legend>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-0.5 sm:gap-1">
         {options.map((opt) => {
           const on = opt.id === value
           return (
@@ -35,7 +36,7 @@ function ChoiceRow<T extends string>({
               type="button"
               onClick={() => onChange(opt.id)}
               className={cn(
-                'rounded-sm px-2 py-1 text-[11px] font-medium sm:px-3 sm:py-1.5 sm:text-xs',
+                'rounded-sm px-1.5 py-0.5 text-[10px] font-medium sm:px-3 sm:py-1.5 sm:text-xs',
                 on
                   ? 'bg-white text-black'
                   : 'border border-neutral-800 text-neutral-400 hover:border-neutral-500 hover:text-white',
@@ -66,6 +67,7 @@ export function PersonalityGrid({
   vibrato,
   vibratoRate,
   scale,
+  language,
   onSelect,
   onSelectPreset,
   onAddPreset,
@@ -77,6 +79,7 @@ export function PersonalityGrid({
   onVibrato,
   onVibratoRate,
   onScale,
+  onLanguage,
 }: {
   selectedId: PersonalityId
   selectedPresetId: string | null
@@ -88,6 +91,7 @@ export function PersonalityGrid({
   vibrato: number
   vibratoRate: number
   scale: number
+  language: Language
   onSelect: (p: Personality) => void
   onSelectPreset: (preset: VoicePreset) => void
   onAddPreset: () => void
@@ -99,18 +103,19 @@ export function PersonalityGrid({
   onVibrato: (n: number) => void
   onVibratoRate: (n: number) => void
   onScale: (n: number) => void
+  onLanguage: (v: Language) => void
 }) {
   return (
-    <div className="flex min-h-0 flex-col gap-2 sm:gap-4">
+    <div className="flex min-h-0 flex-col gap-1 sm:gap-4">
       <div className="min-w-0">
-        <div className="mb-1 flex items-baseline justify-between gap-2 sm:mb-2">
-          <p className="text-[10px] font-medium tracking-[0.18em] text-neutral-500 uppercase sm:text-[11px]">
+        <div className="mb-0.5 flex items-baseline justify-between gap-2 sm:mb-2">
+          <p className="text-[9px] font-medium tracking-[0.18em] text-neutral-500 uppercase sm:text-[11px]">
             Personality
           </p>
           <button
             type="button"
             onClick={onAddPreset}
-            className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium tracking-[0.14em] text-neutral-400 uppercase hover:bg-white/10 hover:text-white sm:text-[11px]"
+            className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 text-[9px] font-medium tracking-[0.14em] text-neutral-400 uppercase hover:bg-white/10 hover:text-white sm:text-[11px]"
             title="Save current voice as a custom preset"
           >
             <Plus className="size-3" aria-hidden />
@@ -120,7 +125,7 @@ export function PersonalityGrid({
         <div
           role="listbox"
           aria-label="Personality"
-          className="personality-strip grid grid-flow-col grid-rows-2 auto-cols-max gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="personality-strip grid grid-flow-col grid-rows-2 auto-cols-max gap-1 overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-1.5"
         >
           {PERSONALITIES.map((p) => {
             const on = selectedPresetId == null && p.id === selectedId
@@ -133,7 +138,7 @@ export function PersonalityGrid({
                 title={p.blurb}
                 onClick={() => onSelect(p)}
                 className={cn(
-                  'rounded-sm px-2.5 py-1 text-xs font-medium whitespace-nowrap',
+                  'rounded-sm px-2 py-0.5 text-[11px] font-medium whitespace-nowrap sm:px-2.5 sm:py-1 sm:text-xs',
                   on
                     ? 'bg-white text-black'
                     : 'bg-white/10 text-white/75 hover:bg-white/16',
@@ -154,7 +159,7 @@ export function PersonalityGrid({
                   title={`Custom · based on ${preset.personalityId}`}
                   onClick={() => onSelectPreset(preset)}
                   className={cn(
-                    'rounded-sm py-1 pr-6 pl-2.5 text-xs font-medium whitespace-nowrap',
+                    'rounded-sm py-0.5 pr-5 pl-2 text-[11px] font-medium whitespace-nowrap sm:py-1 sm:pr-6 sm:pl-2.5 sm:text-xs',
                     on
                       ? 'bg-white text-black'
                       : 'bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30',
@@ -171,7 +176,7 @@ export function PersonalityGrid({
                     onRemovePreset(preset.id)
                   }}
                   className={cn(
-                    'absolute top-1/2 right-1 flex size-4 -translate-y-1/2 items-center justify-center rounded-sm',
+                    'absolute top-1/2 right-0.5 flex size-3.5 -translate-y-1/2 items-center justify-center rounded-sm sm:right-1 sm:size-4',
                     on
                       ? 'text-neutral-600 hover:bg-black/10'
                       : 'text-emerald-200/70 hover:bg-white/10',
@@ -188,22 +193,22 @@ export function PersonalityGrid({
             aria-label="Add voice preset"
             title="Save current voice as a custom preset"
             onClick={onAddPreset}
-            className="inline-flex items-center justify-center gap-1 rounded-sm border border-dashed border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-400 whitespace-nowrap hover:border-neutral-400 hover:text-white"
+            className="inline-flex items-center justify-center gap-1 rounded-sm border border-dashed border-neutral-700 px-2 py-0.5 text-[11px] font-medium text-neutral-400 whitespace-nowrap hover:border-neutral-400 hover:text-white sm:px-2.5 sm:py-1 sm:text-xs"
           >
-            <Plus className="size-3.5" aria-hidden />
+            <Plus className="size-3 sm:size-3.5" aria-hidden />
             Preset
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+      <div className="grid grid-cols-3 gap-1 sm:gap-4">
         <ChoiceRow
           legend="Quality"
           value={pitchQuality}
           onChange={onPitchQuality}
           options={[
             { id: 'natural', label: 'Natural' },
-            { id: 'monotone', label: 'Monotone' },
+            { id: 'monotone', label: 'Mono' },
             { id: 'sung', label: 'Sung' },
           ]}
         />
@@ -217,9 +222,18 @@ export function PersonalityGrid({
             { id: 'whispered', label: 'Whisper' },
           ]}
         />
+        <ChoiceRow
+          legend="Language"
+          value={language}
+          onChange={onLanguage}
+          options={[
+            { id: 'english', label: 'EN' },
+            { id: 'spanish', label: 'ES' },
+          ]}
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
+      <div className="grid grid-cols-3 gap-0.5 sm:grid-cols-2 sm:gap-1.5">
         <DragSlider
           label="Pitch"
           token={`{{pitch ${fmt(pitch, 0)}}}`}
@@ -228,6 +242,7 @@ export function PersonalityGrid({
           max={400}
           step={1}
           onChange={onPitch}
+          compact
         />
         <DragSlider
           label={pitchQuality === 'sung' ? 'Rate · hold' : 'Rate'}
@@ -237,6 +252,7 @@ export function PersonalityGrid({
           max={400}
           step={1}
           onChange={onSpeed}
+          compact
         />
         <DragSlider
           label="Vibrato"
@@ -246,15 +262,17 @@ export function PersonalityGrid({
           max={16}
           step={0.1}
           onChange={onVibrato}
+          compact
         />
         <DragSlider
-          label="Vibrato rate"
+          label="Vib rate"
           token={`{{vibrate ${fmt(vibratoRate, 1)}}}`}
           value={vibratoRate}
           min={0.5}
           max={12}
           step={0.1}
           onChange={onVibratoRate}
+          compact
         />
         <DragSlider
           label="Scale"
@@ -264,6 +282,7 @@ export function PersonalityGrid({
           max={1.8}
           step={0.01}
           onChange={onScale}
+          compact
         />
       </div>
     </div>

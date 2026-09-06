@@ -101,8 +101,8 @@ export function PadBank({
 
   return (
     <div>
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <p className="text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
+      <div className="mb-1 flex items-baseline justify-between gap-2 sm:mb-2 sm:gap-3">
+        <p className="text-[9px] font-medium tracking-[0.18em] text-neutral-500 uppercase sm:text-[11px]">
           Pads
         </p>
         {midi}
@@ -129,7 +129,7 @@ export function PadBank({
                 onClear(i)
               }}
               className={cn(
-                'group relative min-h-9 overflow-hidden touch-none rounded-sm border px-1 py-1 text-left select-none sm:min-h-14 sm:px-2 sm:py-1.5',
+                'group relative min-h-7 overflow-hidden touch-none rounded-sm border px-0.5 py-0.5 text-left select-none sm:min-h-14 sm:px-2 sm:py-1.5',
                 on && 'border-white bg-white text-black',
                 !on && filled && 'border-neutral-700 text-neutral-200 hover:border-white',
                 !on &&
@@ -154,7 +154,7 @@ export function PadBank({
                 )}
               >
                 {PAD_KEYS[i]}
-                <span className={cn('ml-1', on ? 'text-neutral-400' : 'text-neutral-700')}>
+                <span className={cn('ml-1 hidden sm:inline', on ? 'text-neutral-400' : 'text-neutral-700')}>
                   {midiNoteName(midiNoteForPad(i))}
                 </span>
               </span>

@@ -47,7 +47,7 @@ function WordMenu({ children }: { children: ReactNode }) {
 }
 
 const editorClass =
-  'w-full min-h-[1.25em] px-0 py-1 font-sans text-lg leading-snug sm:text-2xl font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:text-2xl md:text-3xl'
+  'w-full min-h-[1.1em] px-0 py-0.5 font-sans text-base leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:min-h-[1.25em] sm:py-1 sm:text-2xl md:text-3xl'
 
 const wordClass =
   'inline border-0 p-0 m-0 bg-transparent align-baseline appearance-none [font:inherit] rounded-[3px] text-left'
@@ -210,11 +210,11 @@ export function TalkActions({
   const busy = rendering || exporting
   const playDisabled = busy || (empty && !speaking && !paused)
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
       <Button
         type="button"
         variant="talk"
-        size="iconLg"
+        size="icon" className="size-9 sm:size-11"
         disabled={playDisabled}
         onClick={onPlay}
         aria-label={rendering ? 'Building voice' : speaking ? 'Pause' : 'Play'}
@@ -224,7 +224,7 @@ export function TalkActions({
       <Button
         type="button"
         variant="stop"
-        size="iconLg"
+        size="icon" className="size-9 sm:size-11"
         disabled={!speaking && !paused}
         onClick={onStop}
         aria-label="Stop"
@@ -234,7 +234,7 @@ export function TalkActions({
       <Button
         type="button"
         variant={looping ? 'talk' : 'export'}
-        size="iconLg"
+        size="icon" className="size-9 sm:size-11"
         aria-pressed={looping}
         aria-label={looping ? 'Disable loop' : 'Loop'}
         onClick={onLoop}
@@ -244,7 +244,7 @@ export function TalkActions({
       <Button
         type="button"
         variant="export"
-        size="iconLg"
+        size="icon" className="size-9 sm:size-11"
         disabled={busy || empty || speaking || paused}
         onClick={onExport}
         aria-label={exporting ? 'Exporting WAV' : 'Export WAV'}
@@ -522,7 +522,7 @@ export function TalkPanel({
   const showEditor = empty || editing
 
   return (
-    <div className="flex min-h-0 flex-col gap-1.5 sm:gap-3">
+    <div className="flex min-h-0 flex-col gap-1 sm:gap-3">
       <PadBank
         pads={pads}
         active={activePad}
@@ -560,7 +560,7 @@ export function TalkPanel({
       </div>
       <div
         ref={textBlockRef}
-        className="relative min-h-0 max-h-[22vh] overflow-y-auto overscroll-contain sm:max-h-none sm:overflow-visible"
+        className="relative min-h-0 max-h-[12vh] overflow-y-auto overscroll-contain sm:max-h-none sm:overflow-visible"
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
             e.preventDefault()

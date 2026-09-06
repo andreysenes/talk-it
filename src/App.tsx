@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MidiBadge } from './components/MidiBadge'
-import { ParameterPanel } from './components/ParameterPanel'
 import { PersonalityGrid } from './components/PersonalityGrid'
 import { TalkActions, TalkPanel } from './components/TalkPanel'
 import {
@@ -348,10 +347,10 @@ export default function App() {
   }
 
   return (
-    <div className="shell flex h-dvh max-h-dvh flex-col overflow-hidden px-2 py-2 sm:px-6 sm:py-8">
-      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-2 sm:gap-6">
+    <div className="shell flex h-dvh max-h-dvh flex-col overflow-hidden px-1.5 py-1.5 sm:px-6 sm:py-8">
+      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-1 sm:gap-6">
         <h1 className="sr-only">Talk It!</h1>
-        <main className="talk-panel flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-sm p-2 sm:gap-6 sm:overflow-visible sm:p-6">
+        <main className="talk-panel flex min-h-0 flex-1 flex-col gap-1 overflow-hidden rounded-sm p-1.5 sm:gap-6 sm:overflow-visible sm:p-6">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <TalkPanel
             text={text}
@@ -463,6 +462,7 @@ export default function App() {
             vibrato={vibrato}
             vibratoRate={vibratoRate}
             scale={scale}
+            language={language}
             onSelect={selectPersonality}
             onSelectPreset={selectPreset}
             onAddPreset={addPreset}
@@ -474,10 +474,8 @@ export default function App() {
             onVibrato={setVibrato}
             onVibratoRate={setVibratoRate}
             onScale={setScale}
+            onLanguage={setLanguage}
           />
-          </div>
-          <div className="shrink-0">
-          <ParameterPanel language={language} onLanguage={setLanguage} />
           </div>
         </main>
       </div>
