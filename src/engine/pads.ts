@@ -7,6 +7,7 @@ import {
   type TalkSettings,
   type VocalEffort,
 } from './personalities'
+import { packSoftVoice } from './softVoice'
 
 export const PAD_COUNT = 12
 
@@ -170,13 +171,18 @@ export function padsEqual(a: PhrasePad, b: PhrasePad): boolean {
 }
 
 /** SoftVoice demo lines for pads 1–3 (raw klattsch / Talk It! phoneme sequences). */
-export const PAD1_PHONEMES =
+/** Raw SoftVoice lines (controls exposed). Packed forms hide controls in {{sv}}. */
+export const PAD1_PHONEMES_RAW =
   'r243.2 s1.14 bF#2 ( W ER ) bA2 ( K IH T ) bF#3 ( HH AA R ) bA3 ( D ER ) bC#4 ( M EY ) bA3 ( K IH T ) bF#3 ( B EH ) bA3 ( T ER ) bE2 ( D UW ) bE3 ( W IH T ) bA3 ( F AE S ) bE3 ( T ER ) bB3 ( M EY K ) bA3 ( S AH S ) bG#3 ( S T R AO NG ) bA3 ( G ER ) bEb2 ( M AO R ) bEb3 ( DH AE ) bF#4 ( N EH ) bEb4 ( V ER ) bB4 v8 w8 ( AW ) bA4 ( ER ) bF#4 ( AE F T ) bEb4 ( ER R ) bD3 v12 ( AW ) bD3 ( ER W ) v w bF#3 ( ER K ) bA3 ( IH Z N ) bF#2 s0.8 ( EH V ) bF#1 ( ER ) ( OW V ) r115 ER'
 
-export const PAD2_PHONEMES = 'g0.8 HH IY+30 b+50 v20 w10 D r900 IH-100 r D'
+export const PAD2_PHONEMES_RAW = 'g0.8 HH IY+30 b+50 v20 w10 D r900 IH-100 r D'
 
-export const PAD3_PHONEMES =
+export const PAD3_PHONEMES_RAW =
   'r180 v15 w7 b200 s0.8 h0 g0.3 OW+20 N r360 OW-40 , AY r120 M T UH+20 R N IH NG IH+10 N T UW EY r300 b+20 B UH-30 G , b+300 r200 s1.6 h0.1 OW b+20 N OW-40 AY M EY b+20 B UH-40 G N AO-40 W'
+
+export const PAD1_PHONEMES = packSoftVoice(PAD1_PHONEMES_RAW)
+export const PAD2_PHONEMES = packSoftVoice(PAD2_PHONEMES_RAW)
+export const PAD3_PHONEMES = packSoftVoice(PAD3_PHONEMES_RAW)
 
 /** Retired English factory demos — upgraded to SoftVoice phoneme pads on load. */
 const LEGACY_FACTORY_PADS: Array<{ name: string; text: string }> = [
@@ -190,6 +196,11 @@ const LEGACY_FACTORY_PADS: Array<{ name: string; text: string }> = [
 
 export function isRetiredFactoryText(text: string): boolean {
   return LEGACY_FACTORY_PADS.some((pad) => pad.text === text)
+}
+
+/** Raw SoftVoice demos with controls still exposed — upgrade to packed chip form. */
+export function isExposedSoftVoiceText(text: string): boolean {
+  return [PAD1_PHONEMES_RAW, PAD2_PHONEMES_RAW, PAD3_PHONEMES_RAW].includes(text)
 }
 
 export const DEFAULT_PADS: PhrasePad[] = [
@@ -226,6 +237,16 @@ export function normalizePads(raw: unknown): PhrasePad[] {
     const legacy = LEGACY_FACTORY_PADS[i]
     const rawName = typeof pad?.name === 'string' ? pad.name : undefined
     const rawText = typeof pad?.text === 'string' ? pad.text : undefined
+
+    const rawSoftVoice = [PAD1_PHONEMES_RAW, PAD2_PHONEMES_RAW, PAD3_PHONEMES_RAW][i]
+    // Upgrade exposed SoftVoice control lines into packed chip form.
+    if (rawText && rawSoftVoice && rawText === rawSoftVoice && isPersonalityId(fallback.personalityId)) {
+      return {
+        name: typeof rawName === 'string' ? rawName : fallback.name,
+        text: fallback.text,
+        ...voiceFromPad(fallback, stockPadVoice('male')),
+      }
+    }
 
     // Replace retired English factory demos with SoftVoice phoneme examples.
     if (

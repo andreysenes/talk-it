@@ -167,7 +167,10 @@ export function textToPhonemeString(
  * with pitch offsets) must skip English G2P and go straight to klattsch.
  */
 export function isRawPhonemeSequence(text: string): boolean {
-  const stripped = text.replace(COMMAND_RE, ' ').trim()
+  // Packed SoftVoice demos keep controls inside {{sv …}}; strip Talk It! cmds
+  // but keep SoftVoice payload for detection.
+  const forDetect = text.replace(/\{\{\s*\.?sv\s+([^}]+?)\s*\}\}/gi, ' $1 ')
+  const stripped = forDetect.replace(COMMAND_RE, ' ').trim()
   if (!stripped) return false
   if (/\(\s*[A-Z]{1,3}(?:[12])?(?:\s+[A-Z]{1,3}(?:[12])?)*\s*\)/.test(stripped)) {
     return true
@@ -225,6 +228,11 @@ function planRawUtterance(
   for (const part of parts) {
     if (part.kind === 'cmd') {
       if (part.disabled) continue
+      // SoftVoice controls packed as {{sv TOKEN}} — emit the raw SoftVoice token.
+      if (part.name === 'sv') {
+        if (part.raw?.trim()) tokens.push(part.raw.trim())
+        continue
+      }
       const before = state
       state = applyCommandToken(settings, state, part.name, part.value)
       tokens.push(...emitChange(before, state))
@@ -237,13 +245,26 @@ function planRawUtterance(
     // Highlight each `( PHONE … )` group while audio runs.
     const groupRe = /\(\s*[A-Z]{1,3}(?:[12])?(?:\s+[A-Z]{1,3}(?:[12])?)*\s*\)/g
     let match: RegExpExecArray | null
+    let grouped = false
     while ((match = groupRe.exec(body)) !== null) {
+      grouped = true
       const phones = match[0].replace(/[()]/g, '').trim().split(/\s+/).filter(Boolean)
       words.push({
         start: part.start + match.index,
         end: part.start + match.index + match[0].length,
         phoneCount: Math.max(1, phones.length),
       })
+    }
+    // SoftVoice lines without parentheses (pad 2/3) — light up ARPABET phones.
+    if (!grouped) {
+      const phoneRe = /\b[A-Z]{1,3}(?:[+-]\d+)?\b/g
+      while ((match = phoneRe.exec(body)) !== null) {
+        words.push({
+          start: part.start + match.index,
+          end: part.start + match.index + match[0].length,
+          phoneCount: 1,
+        })
+      }
     }
   }
 

@@ -36,9 +36,20 @@ export type VoicePatch = Partial<VoiceState>
 
 export type ParsedPart =
   | { kind: 'text'; text: string; start: number; end: number }
-  | { kind: 'cmd'; name: string; value: number | null; start: number; end: number; disabled?: boolean }
+  | {
+      kind: 'cmd'
+      name: string
+      value: number | null
+      /** SoftVoice passthrough payload for `{{sv TOKEN}}`. */
+      raw?: string
+      start: number
+      end: number
+      disabled?: boolean
+    }
 
-export const COMMAND_RE = /\{\{\s*\.?[a-z]+(?:\s+-?\d+(?:\.\d+)?)?\s*\}\}/gi
+/** Talk It! `{{pitch 100}}` and SoftVoice `{{sv bF#2}}` / `{{.sv r243.2}}`. */
+export const COMMAND_RE =
+  /\{\{\s*\.?(?:sv\s+[^}]+|[a-z]+(?:\s+-?\d+(?:\.\d+)?)?)\s*\}\}/gi
 
 const FLAG_TO_FIELD = {
   spanish: ['language', 'spanish'],
@@ -244,6 +255,14 @@ export function parseEmbedded(text: string): ParsedPart[] {
     const start = match.index
     const end = match.index + match[0].length
     const inner = match[0].slice(2, -2).trim()
+    const soft = inner.match(/^(\.?)sv\s+(.+)$/i)
+    if (soft) {
+      const disabled = soft[1] === '.'
+      const payload = soft[2]!.trim()
+      if (payload) out.push({ kind: 'cmd', name: 'sv', value: null, raw: payload, start, end, disabled })
+      last = end
+      continue
+    }
     const parsed = inner.match(/^(\.?)([a-z]+)(?:\s+(-?\d+(?:\.\d+)?))?$/i)
     const disabled = parsed?.[1] === '.'
     const name = parsed?.[2]?.toLowerCase() ?? ''
@@ -251,7 +270,8 @@ export function parseEmbedded(text: string): ParsedPart[] {
     if (name in FLAG_TO_FIELD && raw === undefined) {
       out.push({ kind: 'cmd', name, value: null, start, end, disabled })
     } else if (name in NUMBER_FIELDS && raw !== undefined) {
-      const value = Number(raw)
+      const value = Number(raw
+)
       if (Number.isFinite(value)) {
         const skipZero = name === 'pitch' || name === 'rate' || name === 'speed'
         if (!skipZero || value !== 0) out.push({ kind: 'cmd', name, value, start, end, disabled })
@@ -418,7 +438,7 @@ export function stripInherited(bag: CommandBag, inherited: VoiceState): CommandB
   }
 }
 
-export const CMD_AT_END = /\{\{\s*\.?[a-z]+(?:\s+-?\d+(?:\.\d+)?)?\s*\}\}\s*$/i
+export const CMD_AT_END = /\{\{\s*\.?(?:sv\s+[^}]+|[a-z]+(?:\s+-?\d+(?:\.\d+)?)?)\s*\}\}\s*$/i
 
 export const NUMBER_DIGITS: Record<
   'pitch' | 'rate' | 'scale' | 'vibrato' | 'vibrate' | 'tremolo' | 'trrate' | 'breath' | 'tilt' | 'effort',

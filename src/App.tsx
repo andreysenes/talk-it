@@ -14,6 +14,7 @@ import {
 import {
   DEFAULT_PADS,
   emptyPad,
+  isExposedSoftVoiceText,
   isRetiredFactoryText,
   normalizePads,
   padIndexFromMidiNote,
@@ -88,7 +89,10 @@ function bootFromSaved(saved: Partial<Saved>) {
   const padText = pads[activePad]?.text ?? DEFAULT_PADS[0]!.text
   const savedText = typeof saved.text === 'string' ? saved.text : padText
   // Don't keep a retired factory line in the editor after pads were upgraded.
-  const text = isRetiredFactoryText(savedText) ? padText : savedText
+  const text =
+    isRetiredFactoryText(savedText) || isExposedSoftVoiceText(savedText)
+      ? padText
+      : savedText
   return {
     pads,
     activePad,

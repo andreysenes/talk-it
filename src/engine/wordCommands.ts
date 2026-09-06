@@ -12,6 +12,11 @@ import {
   type VoicePatch,
   type VoiceState,
 } from './commands'
+import {
+  softVoiceCmdsFromRegion,
+  softVoiceDisplayText,
+  splitSoftVoiceChunks,
+} from './softVoice'
 import type { Language } from './personalities'
 
 export type WordVoice = VoiceState & {
@@ -31,6 +36,7 @@ export type WordVoice = VoiceState & {
   hasBreath: boolean
   hasTilt: boolean
   hasEffort: boolean
+  hasSoftVoice: boolean
   muted: boolean
 }
 
@@ -54,6 +60,7 @@ const CLEAR_FLAGS = {
   hasBreath: false,
   hasTilt: false,
   hasEffort: false,
+  hasSoftVoice: false,
   muted: false,
 }
 
@@ -71,6 +78,7 @@ function markPending(pending: typeof CLEAR_FLAGS, name: string) {
   else if (name === 'breath') pending.hasBreath = true
   else if (name === 'tilt') pending.hasTilt = true
   else if (name === 'effort') pending.hasEffort = true
+  else if (name === 'sv') pending.hasSoftVoice = true
 }
 
 export function annotateWords(source: string, defaults: VoiceDefaults): DisplayPiece[] {
@@ -85,6 +93,11 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
     if (part.kind === 'cmd') {
       markPending(pending, part.name)
       skipLeadingSpace = true
+      if (part.name === 'sv') {
+        // SoftVoice passthrough — attach to the next word, no VoiceState change.
+        if (part.disabled) pending.muted = true
+        continue
+      }
       if (part.disabled) {
         pending.muted = true
         overlay = applyParsedCommand(overlay ?? state, part.name, part.value)
@@ -94,7 +107,7 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
       continue
     }
 
-    const chunks = part.text.split(/(\s+)/)
+    const chunks = splitSoftVoiceChunks(part.text)
     let offset = 0
     for (const chunk of chunks) {
       const start = part.start + offset
@@ -121,7 +134,7 @@ export function annotateWords(source: string, defaults: VoiceDefaults): DisplayP
         word: {
           start,
           end,
-          text: chunk,
+          text: softVoiceDisplayText(chunk),
           ...(pending.muted && overlay ? overlay : state),
           ...pending,
         },
@@ -153,7 +166,8 @@ export function wordIsMarked(word: WordVoice): boolean {
     word.hasTrrate ||
     word.hasBreath ||
     word.hasTilt ||
-    word.hasEffort
+    word.hasEffort ||
+    word.hasSoftVoice
   )
 }
 
@@ -247,9 +261,11 @@ export function setWordVoice(
 ): { next: string; wordStart: number } {
   const { regionStart } = commandRegion(source, wordStart)
   const region = source.slice(regionStart, wordStart)
+  const soft = softVoiceCmdsFromRegion(region).join('')
   const existing = bagFromRegion(region)
   const muted = regionIsMuted(region)
-  const insert = serializeBag(stripInherited(mergeBag(existing, patch), inherited), muted)
+  const bag = serializeBag(stripInherited(mergeBag(existing, patch), inherited), muted)
+  const insert = soft && bag ? `${soft} ${bag}` : soft || bag
   return spliceRegion(source, regionStart, wordStart, insert)
 }
 
@@ -258,7 +274,9 @@ export function resetWordVoice(
   wordStart: number,
 ): { next: string; wordStart: number } {
   const { regionStart } = commandRegion(source, wordStart)
-  return spliceRegion(source, regionStart, wordStart, '')
+  // Keep SoftVoice {{sv …}} melody/rate cmds; clear only Talk It! voice tags.
+  const soft = softVoiceCmdsFromRegion(source.slice(regionStart, wordStart)).join('')
+  return spliceRegion(source, regionStart, wordStart, soft)
 }
 
 export function setWordMuted(
@@ -268,13 +286,19 @@ export function setWordMuted(
   inherited: VoiceDefaults,
 ): { next: string; wordStart: number } {
   const { regionStart } = commandRegion(source, wordStart)
-  const existing = bagFromRegion(source.slice(regionStart, wordStart))
+  const region = source.slice(regionStart, wordStart)
+  const soft = softVoiceCmdsFromRegion(region)
+    .map((cmd) => (muted ? cmd.replace('{{sv ', '{{.sv ') : cmd.replace('{{.sv ', '{{sv ')))
+    .join('')
+  const existing = bagFromRegion(region)
   const stripped = stripInherited(existing, inherited)
   const bag = bagHasValues(stripped) ? stripped : mergeBag(existing, inherited)
   if (!muted && !bagHasValues(stripped)) {
-    return spliceRegion(source, regionStart, wordStart, '')
+    return spliceRegion(source, regionStart, wordStart, soft)
   }
-  return spliceRegion(source, regionStart, wordStart, serializeBag(bag, muted))
+  const voice = serializeBag(bag, muted)
+  const insert = soft && voice ? `${soft} ${voice}` : soft || voice
+  return spliceRegion(source, regionStart, wordStart, insert)
 }
 
 function spliceRegion(
