@@ -9,11 +9,11 @@ export function ParameterPanel({
   onLanguage: (v: Language) => void
 }) {
   return (
-    <fieldset>
-      <legend className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
+    <fieldset className="min-w-0 shrink-0">
+      <legend className="mb-1 text-[10px] font-medium tracking-[0.18em] text-neutral-500 uppercase sm:mb-2 sm:text-[11px]">
         Language
       </legend>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1">
         {(
           [
             { id: 'english', label: 'English' },
@@ -27,7 +27,7 @@ export function ParameterPanel({
               type="button"
               onClick={() => onLanguage(opt.id)}
               className={cn(
-                'rounded-sm px-3 py-1.5 text-xs font-medium sm:text-sm',
+                'rounded-sm px-2 py-1 text-[11px] font-medium sm:px-3 sm:py-1.5 sm:text-xs',
                 on
                   ? 'bg-white text-black'
                   : 'border border-neutral-800 text-neutral-400 hover:border-neutral-500 hover:text-white',

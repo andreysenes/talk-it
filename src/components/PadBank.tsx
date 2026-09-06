@@ -107,7 +107,7 @@ export function PadBank({
         </p>
         {midi}
       </div>
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+      <div className="grid grid-cols-6 gap-1 sm:gap-2">
         {pads.map((pad, i) => {
           const on = i === active
           const filled = Boolean(pad.text.trim() || pad.name.trim())
@@ -129,7 +129,7 @@ export function PadBank({
                 onClear(i)
               }}
               className={cn(
-                'group relative min-h-14 overflow-hidden touch-none rounded-sm border px-2 py-1.5 text-left select-none',
+                'group relative min-h-9 overflow-hidden touch-none rounded-sm border px-1 py-1 text-left select-none sm:min-h-14 sm:px-2 sm:py-1.5',
                 on && 'border-white bg-white text-black',
                 !on && filled && 'border-neutral-700 text-neutral-200 hover:border-white',
                 !on &&
@@ -158,7 +158,7 @@ export function PadBank({
                   {midiNoteName(midiNoteForPad(i))}
                 </span>
               </span>
-              <span className="relative mt-0.5 block truncate text-xs font-medium">
+              <span className="relative mt-0.5 block truncate text-[10px] font-medium sm:text-xs">
                 {padCaption(pad, i)}
               </span>
               {pad.loop ? (

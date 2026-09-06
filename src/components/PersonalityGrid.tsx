@@ -1,9 +1,12 @@
+import { Plus, X } from 'lucide-react'
 import {
   PERSONALITIES,
   type Personality,
+  type PersonalityId,
   type PitchQuality,
   type VocalEffort,
 } from '../engine/personalities'
+import type { VoicePreset } from '../engine/presets'
 import { DragSlider } from './DragSlider'
 import { cn } from '../lib/utils'
 
@@ -19,11 +22,11 @@ function ChoiceRow<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <fieldset>
-      <legend className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
+    <fieldset className="min-w-0">
+      <legend className="mb-1 text-[10px] font-medium tracking-[0.18em] text-neutral-500 uppercase sm:mb-2 sm:text-[11px]">
         {legend}
       </legend>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1">
         {options.map((opt) => {
           const on = opt.id === value
           return (
@@ -32,7 +35,7 @@ function ChoiceRow<T extends string>({
               type="button"
               onClick={() => onChange(opt.id)}
               className={cn(
-                'rounded-sm px-3 py-1.5 text-xs font-medium sm:text-sm',
+                'rounded-sm px-2 py-1 text-[11px] font-medium sm:px-3 sm:py-1.5 sm:text-xs',
                 on
                   ? 'bg-white text-black'
                   : 'border border-neutral-800 text-neutral-400 hover:border-neutral-500 hover:text-white',
@@ -54,6 +57,8 @@ function fmt(n: number, digits: number) {
 
 export function PersonalityGrid({
   selectedId,
+  selectedPresetId,
+  presets,
   pitch,
   speed,
   pitchQuality,
@@ -62,6 +67,9 @@ export function PersonalityGrid({
   vibratoRate,
   scale,
   onSelect,
+  onSelectPreset,
+  onAddPreset,
+  onRemovePreset,
   onPitch,
   onSpeed,
   onPitchQuality,
@@ -70,7 +78,9 @@ export function PersonalityGrid({
   onVibratoRate,
   onScale,
 }: {
-  selectedId: Personality['id']
+  selectedId: PersonalityId
+  selectedPresetId: string | null
+  presets: VoicePreset[]
   pitch: number
   speed: number
   pitchQuality: PitchQuality
@@ -79,6 +89,9 @@ export function PersonalityGrid({
   vibratoRate: number
   scale: number
   onSelect: (p: Personality) => void
+  onSelectPreset: (preset: VoicePreset) => void
+  onAddPreset: () => void
+  onRemovePreset: (id: string) => void
   onPitch: (n: number) => void
   onSpeed: (n: number) => void
   onPitchQuality: (v: PitchQuality) => void
@@ -87,21 +100,30 @@ export function PersonalityGrid({
   onVibratoRate: (n: number) => void
   onScale: (n: number) => void
 }) {
-  const selected = PERSONALITIES.find((p) => p.id === selectedId) ?? PERSONALITIES[0]
-
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
-          Personality
-        </p>
+    <div className="flex min-h-0 flex-col gap-2 sm:gap-4">
+      <div className="min-w-0">
+        <div className="mb-1 flex items-baseline justify-between gap-2 sm:mb-2">
+          <p className="text-[10px] font-medium tracking-[0.18em] text-neutral-500 uppercase sm:text-[11px]">
+            Personality
+          </p>
+          <button
+            type="button"
+            onClick={onAddPreset}
+            className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium tracking-[0.14em] text-neutral-400 uppercase hover:bg-white/10 hover:text-white sm:text-[11px]"
+            title="Save current voice as a custom preset"
+          >
+            <Plus className="size-3" aria-hidden />
+            Add preset
+          </button>
+        </div>
         <div
           role="listbox"
           aria-label="Personality"
-          className="flex flex-wrap gap-1.5"
+          className="personality-strip grid grid-flow-col grid-rows-2 auto-cols-max gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {PERSONALITIES.map((p) => {
-            const on = p.id === selected.id
+            const on = selectedPresetId == null && p.id === selectedId
             return (
               <button
                 key={p.id}
@@ -121,10 +143,60 @@ export function PersonalityGrid({
               </button>
             )
           })}
+          {presets.map((preset) => {
+            const on = selectedPresetId === preset.id
+            return (
+              <span key={preset.id} className="relative inline-flex">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={on}
+                  title={`Custom · based on ${preset.personalityId}`}
+                  onClick={() => onSelectPreset(preset)}
+                  className={cn(
+                    'rounded-sm py-1 pr-6 pl-2.5 text-xs font-medium whitespace-nowrap',
+                    on
+                      ? 'bg-white text-black'
+                      : 'bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30',
+                  )}
+                >
+                  {preset.label}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Remove ${preset.label}`}
+                  title="Remove preset"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onRemovePreset(preset.id)
+                  }}
+                  className={cn(
+                    'absolute top-1/2 right-1 flex size-4 -translate-y-1/2 items-center justify-center rounded-sm',
+                    on
+                      ? 'text-neutral-600 hover:bg-black/10'
+                      : 'text-emerald-200/70 hover:bg-white/10',
+                  )}
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              </span>
+            )
+          })}
+          <button
+            type="button"
+            role="option"
+            aria-label="Add voice preset"
+            title="Save current voice as a custom preset"
+            onClick={onAddPreset}
+            className="inline-flex items-center justify-center gap-1 rounded-sm border border-dashed border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-400 whitespace-nowrap hover:border-neutral-400 hover:text-white"
+          >
+            <Plus className="size-3.5" aria-hidden />
+            Preset
+          </button>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
         <ChoiceRow
           legend="Quality"
           value={pitchQuality}
@@ -132,7 +204,7 @@ export function PersonalityGrid({
           options={[
             { id: 'natural', label: 'Natural' },
             { id: 'monotone', label: 'Monotone' },
-            { id: 'sung', label: 'Sung · held notes' },
+            { id: 'sung', label: 'Sung' },
           ]}
         />
         <ChoiceRow
@@ -142,12 +214,12 @@ export function PersonalityGrid({
           options={[
             { id: 'normal', label: 'Normal' },
             { id: 'breathy', label: 'Breathy' },
-            { id: 'whispered', label: 'Whispered' },
+            { id: 'whispered', label: 'Whisper' },
           ]}
         />
       </div>
 
-      <div className="grid gap-1 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
         <DragSlider
           label="Pitch"
           token={`{{pitch ${fmt(pitch, 0)}}}`}

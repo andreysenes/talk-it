@@ -26,6 +26,11 @@ import {
   type PadVoice,
   type PhrasePad,
 } from './engine/pads'
+import {
+  makeVoicePreset,
+  normalizePresets,
+  type VoicePreset,
+} from './engine/presets'
 import { useAudioOutputs } from './hooks/useAudioOutputs'
 import { useTalkEngine } from './hooks/useTalkEngine'
 
@@ -46,6 +51,8 @@ type Saved = {
   volume: number
   pads?: PhrasePad[]
   activePad?: number
+  presets?: VoicePreset[]
+  activePresetId?: string | null
 }
 
 function loadSaved(): Partial<Saved> {
@@ -93,11 +100,19 @@ function bootFromSaved(saved: Partial<Saved>) {
     isRetiredFactoryText(savedText) || isExposedSoftVoiceText(savedText)
       ? padText
       : savedText
+  const presets = normalizePresets(saved.presets)
+  const activePresetId =
+    typeof saved.activePresetId === 'string' &&
+    presets.some((p) => p.id === saved.activePresetId)
+      ? saved.activePresetId
+      : null
   return {
     pads,
     activePad,
     voice,
     text,
+    presets,
+    activePresetId,
     volume:
       typeof saved.volume === 'number' && Number.isFinite(saved.volume)
         ? Math.min(100, Math.max(0, saved.volume))
@@ -124,6 +139,9 @@ export default function App() {
   const [activePad, setActivePad] = useState(boot.activePad)
   const [text, setText] = useState(boot.text)
   const [volume, setVolume] = useState(boot.volume)
+  const [presets, setPresets] = useState<VoicePreset[]>(boot.presets)
+  const [activePresetId, setActivePresetId] = useState<string | null>(boot.activePresetId)
+
 
   const audio = useAudioOutputs()
   const { state, error, speak, stop, pause, resume, retune, exportWav, unlock, highlight, progress, analyser, setLoop: setEngineLoop, releaseHold } =
@@ -189,6 +207,8 @@ export default function App() {
       volume,
       pads,
       activePad,
+      presets,
+      activePresetId,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   }, [
@@ -207,6 +227,8 @@ export default function App() {
     pads,
     activePad,
     loop,
+    presets,
+    activePresetId,
   ])
 
   useEffect(() => {
@@ -250,6 +272,7 @@ export default function App() {
   }
 
   function selectPersonality(p: Personality) {
+    setActivePresetId(null)
     applyVoice({
       ...stockPadVoice(p.id, { language, vintage }),
       language,
@@ -258,12 +281,55 @@ export default function App() {
     })
   }
 
+  function selectPreset(preset: VoicePreset) {
+    setActivePresetId(preset.id)
+    applyVoice({
+      ...stockPadVoice(preset.personalityId, { language, vintage }),
+      personalityId: preset.personalityId,
+      pitch: preset.pitch,
+      speed: preset.speed,
+      pitchQuality: preset.pitchQuality,
+      vocalEffort: preset.vocalEffort,
+      vibrato: preset.vibrato,
+      vibratoRate: preset.vibratoRate,
+      scale: preset.scale,
+      language,
+      vintage,
+      loop,
+    })
+  }
+
+  function addPreset() {
+    const suggested = `Voice ${presets.length + 1}`
+    const label = window.prompt('Name this voice preset', suggested)?.trim()
+    if (!label) return
+    const preset = makeVoicePreset({
+      label,
+      personalityId: personality.id,
+      pitch,
+      speed,
+      pitchQuality,
+      vocalEffort,
+      vibrato,
+      vibratoRate,
+      scale,
+    })
+    setPresets((prev) => [...prev, preset])
+    setActivePresetId(preset.id)
+  }
+
+  function removePreset(id: string) {
+    setPresets((prev) => prev.filter((p) => p.id !== id))
+    if (activePresetId === id) setActivePresetId(null)
+  }
+
   function padDown(index: number) {
     const pad = pads[index]
     if (!pad) return
     const nextVoice = pad.personalityId
       ? voiceFromPad(pad, voiceRef.current)
       : voiceRef.current
+    setActivePresetId(null)
     setActivePad(index)
     setText(pad.text)
     applyVoice(nextVoice)
@@ -282,10 +348,11 @@ export default function App() {
   }
 
   return (
-    <div className="shell min-h-svh px-3 py-6 sm:px-6 sm:py-10">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+    <div className="shell flex h-dvh max-h-dvh flex-col overflow-hidden px-2 py-2 sm:px-6 sm:py-8">
+      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-2 sm:gap-6">
         <h1 className="sr-only">Talk It!</h1>
-        <main className="talk-panel flex flex-col gap-8 rounded-sm p-4 sm:p-6">
+        <main className="talk-panel flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-sm p-2 sm:gap-6 sm:overflow-visible sm:p-6">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <TalkPanel
             text={text}
             onText={setText}
@@ -356,6 +423,8 @@ export default function App() {
               />
             }
           />
+          </div>
+          <div className="shrink-0">
           <TalkActions
             speaking={state === 'speaking'}
             paused={state === 'paused'}
@@ -381,8 +450,12 @@ export default function App() {
             vintage={vintage}
             onVintage={setVintage}
           />
+          </div>
+          <div className="min-h-0 shrink-0">
           <PersonalityGrid
             selectedId={personality.id}
+            selectedPresetId={activePresetId}
+            presets={presets}
             pitch={pitch}
             speed={speed}
             pitchQuality={pitchQuality}
@@ -391,6 +464,9 @@ export default function App() {
             vibratoRate={vibratoRate}
             scale={scale}
             onSelect={selectPersonality}
+            onSelectPreset={selectPreset}
+            onAddPreset={addPreset}
+            onRemovePreset={removePreset}
             onPitch={setPitch}
             onSpeed={setSpeed}
             onPitchQuality={setPitchQuality}
@@ -399,7 +475,10 @@ export default function App() {
             onVibratoRate={setVibratoRate}
             onScale={setScale}
           />
+          </div>
+          <div className="shrink-0">
           <ParameterPanel language={language} onLanguage={setLanguage} />
+          </div>
         </main>
       </div>
     </div>

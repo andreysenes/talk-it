@@ -29,6 +29,8 @@ Open [http://127.0.0.1:4521](http://127.0.0.1:4521).
 - **⌘/Ctrl+Enter** — speak the whole line.
 - **1–0, -, =** — load and speak pads 1–12.
 
+On phones the whole UI fits one screen: personality chips scroll sideways in two rows. **Add preset** saves the current voice (pitch/rate/quality/…) as a custom chip.
+
 Pads **1–3** ship SoftVoice-style phoneme demos. Notes, rates, and vibrato sit inside each syllable as hidden `{{sv …}}` commands — chips only show the phones (`W ER`, `K IH T`, …). Paste raw SoftVoice syntax into the line and Talk It! packs it the same way, without English G2P.
 
 ```bash

@@ -47,7 +47,7 @@ function WordMenu({ children }: { children: ReactNode }) {
 }
 
 const editorClass =
-  'w-full min-h-[1.25em] px-0 py-1 font-sans text-2xl leading-snug font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:text-3xl'
+  'w-full min-h-[1.25em] px-0 py-1 font-sans text-lg leading-snug sm:text-2xl font-medium tracking-tight text-white outline-none whitespace-pre-wrap sm:text-2xl md:text-3xl'
 
 const wordClass =
   'inline border-0 p-0 m-0 bg-transparent align-baseline appearance-none [font:inherit] rounded-[3px] text-left'
@@ -522,7 +522,7 @@ export function TalkPanel({
   const showEditor = empty || editing
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-col gap-1.5 sm:gap-3">
       <PadBank
         pads={pads}
         active={activePad}
@@ -560,7 +560,7 @@ export function TalkPanel({
       </div>
       <div
         ref={textBlockRef}
-        className="relative"
+        className="relative min-h-0 max-h-[22vh] overflow-y-auto overscroll-contain sm:max-h-none sm:overflow-visible"
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
             e.preventDefault()
@@ -739,7 +739,7 @@ export function TalkPanel({
           </div>
         )}
         {showEditor && empty ? (
-          <p className="pointer-events-none absolute top-1 left-0 text-2xl leading-snug font-medium tracking-tight text-neutral-600 sm:text-3xl">
+          <p className="pointer-events-none absolute top-1 left-0 text-lg leading-snug sm:text-2xl font-medium tracking-tight text-neutral-600 sm:text-2xl md:text-3xl">
             Type anything. Talk It! will speak it in the selected voice.
           </p>
         ) : null}
