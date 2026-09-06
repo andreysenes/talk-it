@@ -68,6 +68,8 @@ export function PersonalityGrid({
   vibratoRate,
   scale,
   language,
+  activePadKey,
+  canClearPad,
   onSelect,
   onSelectPreset,
   onAddPreset,
@@ -80,6 +82,7 @@ export function PersonalityGrid({
   onVibratoRate,
   onScale,
   onLanguage,
+  onClearActivePad,
 }: {
   selectedId: PersonalityId
   selectedPresetId: string | null
@@ -92,6 +95,8 @@ export function PersonalityGrid({
   vibratoRate: number
   scale: number
   language: Language
+  activePadKey: string
+  canClearPad: boolean
   onSelect: (p: Personality) => void
   onSelectPreset: (preset: VoicePreset) => void
   onAddPreset: () => void
@@ -104,6 +109,7 @@ export function PersonalityGrid({
   onVibratoRate: (n: number) => void
   onScale: (n: number) => void
   onLanguage: (v: Language) => void
+  onClearActivePad: () => void
 }) {
   return (
     <div className="flex min-h-0 flex-col gap-1 sm:gap-4">
@@ -222,15 +228,63 @@ export function PersonalityGrid({
             { id: 'whispered', label: 'Whisper' },
           ]}
         />
-        <ChoiceRow
-          legend="Language"
-          value={language}
-          onChange={onLanguage}
-          options={[
-            { id: 'english', label: 'EN' },
-            { id: 'spanish', label: 'ES' },
-          ]}
-        />
+        <div className="min-w-0">
+          <fieldset className="min-w-0">
+            <legend className="mb-0.5 text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase sm:mb-1.5 sm:text-[11px]">
+              Language
+            </legend>
+            <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
+              {(
+                [
+                  { id: 'english' as const, label: 'EN' },
+                  { id: 'spanish' as const, label: 'ES' },
+                ] as const
+              ).map((opt) => {
+                const on = opt.id === language
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onLanguage(opt.id)}
+                    className={cn(
+                      'rounded-sm px-1.5 py-0.5 text-[10px] font-medium sm:px-3 sm:py-1.5 sm:text-xs',
+                      on
+                        ? 'bg-white text-black'
+                        : 'border border-neutral-800 text-neutral-400 hover:border-neutral-500 hover:text-white',
+                    )}
+                    aria-pressed={on}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+              <button
+                type="button"
+                onClick={onClearActivePad}
+                disabled={!canClearPad}
+                title={
+                  canClearPad
+                    ? `Clear pad ${activePadKey}`
+                    : `Pad ${activePadKey} is empty`
+                }
+                aria-label={
+                  canClearPad
+                    ? `Clear pad ${activePadKey}`
+                    : `Pad ${activePadKey} is empty`
+                }
+                className={cn(
+                  'ml-0.5 inline-flex items-center gap-0.5 rounded-sm border px-1.5 py-0.5 text-[10px] font-medium sm:hidden',
+                  canClearPad
+                    ? 'border-neutral-700 text-neutral-300 hover:border-white hover:text-white'
+                    : 'cursor-not-allowed border-neutral-900 text-neutral-700',
+                )}
+              >
+                <X className="size-3" aria-hidden />
+                Clear {activePadKey}
+              </button>
+            </div>
+          </fieldset>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-0.5 sm:grid-cols-2 sm:gap-1.5">

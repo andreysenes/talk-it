@@ -176,11 +176,11 @@ export function PadBank({
                   tabIndex={0}
                   aria-label={`Clear pad ${PAD_KEYS[i]}`}
                   className={cn(
-                    'absolute top-1 right-1 z-10 flex size-4 items-center justify-center rounded-sm text-sm leading-none',
+                    'absolute top-1 right-1 z-10 hidden size-4 items-center justify-center rounded-sm text-sm leading-none sm:flex',
                     on
                       ? 'text-neutral-400 hover:bg-black/10 hover:text-black'
                       : 'text-neutral-600 hover:bg-white/10 hover:text-white',
-                    'opacity-100 sm:opacity-0 sm:group-hover:opacity-100',
+                    'sm:opacity-0 sm:group-hover:opacity-100',
                   )}
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={(event) => {

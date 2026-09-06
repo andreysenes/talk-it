@@ -16,6 +16,7 @@ import {
   isExposedSoftVoiceText,
   isRetiredFactoryText,
   normalizePads,
+  PAD_KEYS,
   padIndexFromMidiNote,
   padsEqual,
   snapshotPad,
@@ -463,6 +464,10 @@ export default function App() {
             vibratoRate={vibratoRate}
             scale={scale}
             language={language}
+            activePadKey={PAD_KEYS[activePad] ?? String(activePad + 1)}
+            canClearPad={Boolean(
+              pads[activePad]?.text.trim() || pads[activePad]?.name.trim(),
+            )}
             onSelect={selectPersonality}
             onSelectPreset={selectPreset}
             onAddPreset={addPreset}
@@ -475,6 +480,14 @@ export default function App() {
             onVibratoRate={setVibratoRate}
             onScale={setScale}
             onLanguage={setLanguage}
+            onClearActivePad={() => {
+              setPads((prev) => {
+                const next = [...prev]
+                next[activePad] = emptyPad()
+                return next
+              })
+              setText('')
+            }}
           />
           </div>
         </main>
