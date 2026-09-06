@@ -8,6 +8,10 @@ Instead it synthesizes the same *class* of speech SoftVoice used: **parallel for
 
 It will not be a bit-perfect clone of `TIBASE32.DLL`. It is the closest you can get without running proprietary 32-bit Windows code.
 
+## Try it
+
+Live build on GitHub Pages: [andreysenes.github.io/talk-it](https://andreysenes.github.io/talk-it/)
+
 ## Run locally
 
 Needs Node.js 22+.

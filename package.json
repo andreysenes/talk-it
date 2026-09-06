@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "GITHUB_PAGES=1 tsc -b && GITHUB_PAGES=1 vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "check:synth": "node scripts/check-synth.mjs",
