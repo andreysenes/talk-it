@@ -50,9 +50,12 @@ export function pitchToHz(pitch: number): number {
 }
 
 export function speedToRateMs(speed: number, quality: PitchQuality): number {
-  const sung = quality === 'sung' ? 1.28 : 1
   const safe = Number.isFinite(speed) && speed !== 0 ? speed : 1
-  return BASE_RATE_MS * (BASE_SPEED / Math.abs(safe)) * sung
+  const base = BASE_RATE_MS * (BASE_SPEED / Math.abs(safe))
+  if (quality !== 'sung') return base
+  // klattsch `(syllable)` groups share ONE rate slot for every phone inside.
+  // Floor the hold so sung notes linger instead of rushing through the word.
+  return Math.max(base * 2.7, 400)
 }
 
 function effortMix(
@@ -84,7 +87,7 @@ export function defaultsFromSettings(settings: TalkSettings): VoiceState {
   const vib =
     settings.vibrato ??
     (pitchQuality === 'sung'
-      ? Math.max(personality.vibrato, 4)
+      ? Math.max(personality.vibrato, 5.5)
       : pitchQuality === 'monotone'
         ? 0
         : personality.vibrato)
@@ -182,7 +185,7 @@ function planUtterance(
       if (part.disabled) continue
       const before = state
       state = applyParsedCommand(state, part.name, part.value)
-      if (part.name === 'sung') state = { ...state, vibrato: Math.max(state.vibrato, 4) }
+      if (part.name === 'sung') state = { ...state, vibrato: Math.max(state.vibrato, 5.5) }
       else if (part.name === 'monotone') state = { ...state, vibrato: 0 }
       else if (part.name === 'natural') {
         state = { ...state, vibrato: settings.vibrato ?? settings.personality.vibrato }
@@ -207,6 +210,7 @@ function planUtterance(
       state.quality,
       question && i === lastTextIndex,
       i === lastTextIndex,
+      pitchToHz(state.pitch),
     )
     if (arpabet) tokens.push(arpabet)
   }

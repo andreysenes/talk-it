@@ -627,22 +627,66 @@ const VOWELS = new Set([
   'UW',
 ])
 
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
+
+/** SoftVoice-style held-note steps around the tonic (semitones). */
+const SUNG_MELODY = [0, 2, 4, 5, 7, 5, 4, 2, 0, -2, 0, 3, 5, 3, 0] as const
+
+function hzToMidi(hz: number): number {
+  return Math.round(69 + 12 * Math.log2(Math.max(20, hz) / 440))
+}
+
+function midiToNoteName(midi: number): string {
+  const n = ((midi % 12) + 12) % 12
+  const octave = Math.floor(midi / 12) - 1
+  return `${NOTE_NAMES[n]}${octave}`
+}
+
+/**
+ * Split ARPABET phones into sung syllables: onset consonants + vowel.
+ * Trailing consonants attach to the previous syllable.
+ * klattsch `( ... )` groups share one rate slot — whole-word groups sound rushed.
+ */
+export function splitSungSyllables(phones: Phone[]): Phone[][] {
+  const groups: Phone[][] = []
+  let i = 0
+  while (i < phones.length) {
+    const start = i
+    while (i < phones.length && !VOWELS.has(phones[i]!.code)) i += 1
+    if (i >= phones.length) {
+      const rest = phones.slice(start)
+      if (!rest.length) break
+      if (groups.length) groups[groups.length - 1]!.push(...rest)
+      else groups.push(rest)
+      break
+    }
+    i += 1 // vowel nucleus
+    groups.push(phones.slice(start, i))
+  }
+  return groups.filter((g) => g.length > 0)
+}
+
 export function phonesToArpabet(
   chunks: Array<{ phones: Phone[]; pause?: string }>,
   style: 'natural' | 'monotone' | 'sung',
   question: boolean,
   applyContour = true,
+  baseHz = 110,
 ): string {
   const tokens: string[] = []
-  let vowelIndex = 0
   const vowels: number[] = []
+  let melodyStep = 0
+  const tonicMidi = hzToMidi(baseHz)
 
   for (const chunk of chunks) {
     if (style === 'sung' && chunk.phones.length) {
-      const inner = chunk.phones
-        .map((p) => p.code)
-        .join(' ')
-      tokens.push(`( ${inner} )`)
+      // One klattsch note-group per syllable, with a stepwise melody.
+      for (const syllable of splitSungSyllables(chunk.phones)) {
+        const midi = tonicMidi + SUNG_MELODY[melodyStep % SUNG_MELODY.length]!
+        melodyStep += 1
+        tokens.push(`b${midiToNoteName(midi)}`)
+        tokens.push(`( ${syllable.map((p) => p.code).join(' ')} )`)
+      }
     } else {
       for (const phone of chunk.phones) {
         let tok = phone.code
@@ -651,7 +695,6 @@ export function phonesToArpabet(
         }
         if (VOWELS.has(phone.code)) {
           vowels.push(tokens.length)
-          vowelIndex += 1
         }
         tokens.push(tok)
       }
@@ -674,6 +717,5 @@ export function phonesToArpabet(
     }
   }
 
-  void vowelIndex
   return tokens.join(' ')
 }
